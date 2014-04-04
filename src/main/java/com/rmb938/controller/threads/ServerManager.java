@@ -5,6 +5,7 @@ import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.jedis.JedisManager;
+import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import redis.clients.jedis.Jedis;
@@ -54,24 +55,27 @@ public class ServerManager implements Runnable {
                     }
                 }
                 int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                //TODO: check if can have more servers
-                //TODO: find port for new server
-                int port = -1;
-                Server server = new Server(serverController, serverInfo, port);
-                server.startServer();
-                int finalSize = size -1;
-                if (finalSize == 0) {
-                    jedis.del(serverInfo.getServerName());
-                } else {
-                    jedis.set(serverInfo.getServerName(), finalSize+"");
+                if (size > 0) {
+                    //TODO: check if can have more servers
+                    //TODO: find port for new server
+                    int port = -1;
+                    Server server = new Server(serverController, serverInfo, port);
+                    server.startServer();
+                    int finalSize = size - 1;
+                    if (finalSize == 0) {
+                        jedis.set(serverInfo.getServerName(), finalSize + "");
+                        jedis.expire(serverInfo.getServerName(), 30000);
+                    } else {
+                        jedis.set(serverInfo.getServerName(), finalSize + "");
+                    }
                 }
                 jedis.del("lock."+serverInfo.getServerName());
                 JedisManager.returnJedis(jedis);
             }
 
-            //Start up more servers if less then min needed
             if (RemoteController.getMainController() != null) {
                 if (RemoteController.getMainController().getIP().equalsIgnoreCase(serverController.getControllerIP())) {
+                    //Start up more servers if less then min needed
                     for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                         Jedis jedis = JedisManager.getJedis();
                         if (jedis.exists(serverInfo.getServerName())) {
@@ -84,6 +88,33 @@ public class ServerManager implements Runnable {
                             jedis.set(serverInfo.getServerName(), serverInfo.getMinServers() - size+"");
                         }
                         JedisManager.returnJedis(jedis);
+                    }
+
+                    //Add more servers if needed
+                    for (ServerInfo serverInfo : Server.get75Full()) {
+                        Jedis jedis = JedisManager.getJedis();
+                        if (jedis.exists(serverInfo.getServerName())) {
+                            int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
+                            logger.warn("Waiting to create "+size+" servers of "+serverInfo.getServerName()+" if this continues please check server status.");
+                            continue;
+                        }
+                        jedis.set(serverInfo.getServerName(), "3");
+                        JedisManager.returnJedis(jedis);
+                    }
+
+                    //Remove Empty Servers
+                    for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+                        ArrayList<Server> servers = Server.getServers(serverInfo);
+                        if (servers.size() < serverInfo.getMinServers()) {
+                            continue;
+                        }
+                        for (Server server : servers) {
+                            if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
+                                NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getControllerIP(), serverInfo.getServerName()+"."+server.getPort());
+                                netCommandSCTS.flush();
+                                server.setLastHeartbeat(-1);
+                            }
+                        }
                     }
                 }
             }

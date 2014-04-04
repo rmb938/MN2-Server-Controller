@@ -42,22 +42,30 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                 case "heartbeat":
                     String serverName = (String) objectHashMap.get("serverName");
                     int currentPlayers = (Integer) objectHashMap.get("currentPlayers");
-                    Server server;
+                    Server server = null;
                     if (toServerController.equalsIgnoreCase(serverController.getControllerIP())) {
                         server = Server.getServers().get(toServerController+"."+fromServer);
                         if (server == null) {
                             server = new Server(serverController, ServerInfo.getServerInfos().get(serverName), fromServer);
                             Server.getServers().put(toServerController+"."+fromServer, server);
                         }
-                    } else {
+                    } else if (RemoteController.getMainController().getIP().equalsIgnoreCase(serverController.getControllerIP())) {
                         server = Server.getServers().get(toServerController+"."+fromServer);
                         if (server == null) {
                             server = new RemoteServer(serverController, remoteController, fromServer, serverName);
                             Server.getServers().put(toServerController+"."+fromServer, server);
                         }
                     }
-                    server.setCurrentPlayers(currentPlayers);
-                    server.setLastHeartbeat(System.currentTimeMillis());
+                    if (server != null) {
+                        server.setCurrentPlayers(currentPlayers);
+                        server.setLastHeartbeat(System.currentTimeMillis());
+
+                        if (server.getCurrentPlayers() == 0) {
+                            server.setBeatsEmpty(server.getBeatsEmpty()+1);
+                        } else {
+                            server.setBeatsEmpty(0);
+                        }
+                    }
                     break;
                 case "removeServer":
                     Server.getServers().remove(toServerController+"."+fromServer);

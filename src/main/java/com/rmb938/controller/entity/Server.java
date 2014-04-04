@@ -30,11 +30,29 @@ public class Server implements Runnable {
         return servers1;
     }
 
+    public static ArrayList<ServerInfo> get75Full() {
+        ArrayList<ServerInfo> infos = new ArrayList<>();
+        for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+            int full = 0;
+            ArrayList<Server> servers = getServers(serverInfo);
+            for (Server server : servers) {
+                if (((server.getCurrentPlayers()/server.getServerInfo().getMaxPlayers())*100) >= 75) {
+                    full += 1;
+                }
+            }
+            if (full >= servers.size()) {
+                infos.add(serverInfo);
+            }
+        }
+        return infos;
+    }
+
     private final ServerInfo serverInfo;
     private final MN2ServerController serverController;
     private final int port;
     private int currentPlayers;
     private long lastHeartbeat;
+    private int beatsEmpty;
 
     public Server(MN2ServerController serverController, ServerInfo serverInfo, int port) {
         this.serverController = serverController;
@@ -42,6 +60,19 @@ public class Server implements Runnable {
         this.port = port;
         currentPlayers = 0;
         lastHeartbeat = -1;//starting up
+        beatsEmpty = 0;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public int getBeatsEmpty() {
+        return beatsEmpty;
+    }
+
+    public void setBeatsEmpty(int beatsEmpty) {
+        this.beatsEmpty = beatsEmpty;
     }
 
     public ServerInfo getServerInfo() {
