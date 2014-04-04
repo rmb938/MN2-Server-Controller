@@ -1,18 +1,29 @@
 package com.rmb938.controller.entity;
 
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class RemoteController {
 
     private static ConcurrentHashMap<String, RemoteController> remoteControllers = new ConcurrentHashMap<>();
-    private static RemoteController mainController = null;
 
     public static RemoteController getMainController() {
-        return mainController;
-    }
-
-    public static void setMainController(RemoteController mainController) {
-        RemoteController.mainController = mainController;
+        RemoteController controller = null;
+        UUID minId = null;
+        for (RemoteController remoteController : getRemoteControllers().values()) {
+            if (remoteController.getLastHeartbeat() + 60000 < System.currentTimeMillis()) {
+                continue;
+            }
+            if (minId == null) {
+                minId = remoteController.getControllerID();
+            } else {
+                minId = minId.compareTo(remoteController.getControllerID()) == -1 ? minId : remoteController.getControllerID();
+            }
+            if (minId == remoteController.getControllerID()) {
+                controller = remoteController;
+            }
+        }
+        return controller;
     }
 
     public static ConcurrentHashMap<String, RemoteController> getRemoteControllers() {
@@ -21,9 +32,18 @@ public class RemoteController {
 
     private final String IP;
     private long lastHeartbeat = -1;
+    private UUID controllerID;
 
     public RemoteController(String IP) {
         this.IP = IP;
+    }
+
+    public UUID getControllerID() {
+        return controllerID;
+    }
+
+    public void setControllerID(UUID controllerID) {
+        this.controllerID = controllerID;
     }
 
     public long getLastHeartbeat() {

@@ -2,9 +2,11 @@ package com.rmb938.controller.threads;
 
 import com.rmb938.controller.MN2ServerController;
 import com.rmb938.controller.entity.RemoteController;
+import com.rmb938.controller.entity.RemoteServer;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.jedis.JedisManager;
+import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTB;
 import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -110,9 +112,17 @@ public class ServerManager implements Runnable {
                         }
                         for (Server server : servers) {
                             if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
-                                NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getControllerIP(), serverInfo.getServerName()+"."+server.getPort());
+                                String IP = serverController.getControllerIP();
+                                if (server instanceof RemoteServer) {
+                                    IP = ((RemoteServer)server).getRemoteController().getIP();
+                                }
+                                NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getControllerIP(), IP+"."+serverInfo.getServerName()+"."+server.getPort());
                                 netCommandSCTS.flush();
-                                server.setLastHeartbeat(-1);
+                                server.setLastHeartbeat(-2);
+
+                                NetCommandSCTB netCommandSCTB = new NetCommandSCTB("removeServer", serverController.getControllerIP(), "*");
+                                netCommandSCTB.addArg("serverInfo", IP+"."+serverInfo.getServerName()+"."+server.getPort());
+                                netCommandSCTB.flush();
                             }
                         }
                     }

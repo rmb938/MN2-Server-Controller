@@ -1,12 +1,16 @@
 package com.rmb938.controller;
 
 
+import com.rmb938.controller.entity.Bungee;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
 import com.rmb938.controller.threads.ConsoleInput;
-import com.rmb938.controller.threads.MainControllerFinder;
+import com.rmb938.controller.threads.ServerManager;
 import com.rmb938.jedis.JedisManager;
+import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTSC;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.UUID;
 
 
 public class MN2ServerController {
@@ -36,11 +40,30 @@ public class MN2ServerController {
     }
 
     private final String controllerIP;
+    private final UUID controllerId;
 
-    public MN2ServerController(String controllerIP) {
+    public MN2ServerController(final String controllerIP) {
         this.controllerIP = controllerIP;
+        this.controllerId = UUID.randomUUID();
 
         //TODO: connect to mysql and read servers
+
+        logger.info("Starting Heartbeat");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    NetCommandSCTSC netCommandSCTSC = new NetCommandSCTSC("heartbeat", controllerIP, "*");
+                    netCommandSCTSC.addArg("id", controllerId);
+                    netCommandSCTSC.flush();
+                    try {
+                        Thread.sleep(5000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
 
         logger.info("Sleeping for 20 seconds to reconnect to network");
         try {
@@ -50,7 +73,15 @@ public class MN2ServerController {
         }
 
         new ConsoleInput();
-        new MainControllerFinder();
+        new ServerManager(this);
+
+
+        Bungee bungee = new Bungee();
+        bungee.startBungee();
+    }
+
+    public UUID getControllerId() {
+        return controllerId;
     }
 
     public String getControllerIP() {

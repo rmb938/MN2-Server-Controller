@@ -33,7 +33,7 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
             RemoteController remoteController = RemoteController.getRemoteControllers().get(toServerController);
             if (remoteController == null) {
                 remoteController = new RemoteController(toServerController);
-                RemoteController.getRemoteControllers().put(toServerController,remoteController);
+                RemoteController.getRemoteControllers().put(toServerController, remoteController);
             }
 
             String command = jsonObject.getString("command");
@@ -44,31 +44,33 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                     int currentPlayers = (Integer) objectHashMap.get("currentPlayers");
                     Server server = null;
                     if (toServerController.equalsIgnoreCase(serverController.getControllerIP())) {
-                        server = Server.getServers().get(toServerController+"."+fromServer);
+                        server = Server.getServers().get(toServerController + "." + fromServer);
                         if (server == null) {
                             server = new Server(serverController, ServerInfo.getServerInfos().get(serverName), fromServer);
-                            Server.getServers().put(toServerController+"."+fromServer, server);
+                            Server.getServers().put(toServerController + "." + fromServer, server);
                         }
-                    } else if (RemoteController.getMainController().getIP().equalsIgnoreCase(serverController.getControllerIP())) {
-                        server = Server.getServers().get(toServerController+"."+fromServer);
+                    } else {
+                        server = Server.getServers().get(toServerController + "." + fromServer);
                         if (server == null) {
                             server = new RemoteServer(serverController, remoteController, fromServer, serverName);
-                            Server.getServers().put(toServerController+"."+fromServer, server);
+                            Server.getServers().put(toServerController + "." + fromServer, server);
                         }
                     }
-                    if (server != null) {
-                        server.setCurrentPlayers(currentPlayers);
-                        server.setLastHeartbeat(System.currentTimeMillis());
+                    if (server.getLastHeartbeat() == -2) {
+                        return;
+                    }
 
-                        if (server.getCurrentPlayers() == 0) {
-                            server.setBeatsEmpty(server.getBeatsEmpty()+1);
-                        } else {
-                            server.setBeatsEmpty(0);
-                        }
+                    server.setCurrentPlayers(currentPlayers);
+                    server.setLastHeartbeat(System.currentTimeMillis());
+
+                    if (server.getCurrentPlayers() == 0) {
+                        server.setBeatsEmpty(server.getBeatsEmpty() + 1);
+                    } else {
+                        server.setBeatsEmpty(0);
                     }
                     break;
                 case "removeServer":
-                    Server.getServers().remove(toServerController+"."+fromServer);
+                    Server.getServers().remove(toServerController + "." + fromServer);
                     break;
                 default:
                     logger.info("Unknown STCS Command MN2ServerController " + command);

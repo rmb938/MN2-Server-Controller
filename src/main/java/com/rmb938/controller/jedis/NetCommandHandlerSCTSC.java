@@ -10,6 +10,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 public class NetCommandHandlerSCTSC extends NetCommandHandler {
 
@@ -37,12 +38,14 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
             HashMap<String, Object> objectHashMap = objectToHashMap(jsonObject.getJSONObject("data"));
             switch (command) {
                 case "heartbeat":
+                    UUID id = UUID.fromString((String) objectHashMap.get("id"));
                     RemoteController remoteController = RemoteController.getRemoteControllers().get(fromServerController);
                     if (remoteController == null) {
                         remoteController = new RemoteController(fromServerController);
                         RemoteController.getRemoteControllers().put(fromServerController,remoteController);
                     }
                     remoteController.setLastHeartbeat(System.currentTimeMillis());
+                    remoteController.setControllerID(id);
                     break;
                 default:
                     logger.info("Unknown SCTCS Command MN2ServerController " + command);
