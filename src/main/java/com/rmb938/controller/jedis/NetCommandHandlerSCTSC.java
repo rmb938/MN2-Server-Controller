@@ -29,7 +29,7 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
             String toServerController = jsonObject.getString("to");
 
             if (toServerController.equalsIgnoreCase("*") == false) {
-                if (toServerController.equalsIgnoreCase(serverController.getControllerIP()) == false) {
+                if (toServerController.equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
                     return;
                 }
             }

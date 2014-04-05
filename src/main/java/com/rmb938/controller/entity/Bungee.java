@@ -31,7 +31,7 @@ public class Bungee implements Runnable {
                 process.waitFor();
             }
 
-            //TODO: edit server.properties with port, IP and maxPlayers
+            process = runtime.exec(new String[] {"sed", "-i", ""});
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return;

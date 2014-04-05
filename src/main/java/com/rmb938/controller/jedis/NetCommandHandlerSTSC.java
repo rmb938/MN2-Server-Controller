@@ -41,18 +41,19 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
             switch (command) {
                 case "heartbeat":
                     String serverName = (String) objectHashMap.get("serverName");
+                    String serverUUID = (String) objectHashMap.get("serverUUID");
                     int currentPlayers = (Integer) objectHashMap.get("currentPlayers");
-                    Server server = null;
-                    if (toServerController.equalsIgnoreCase(serverController.getControllerIP())) {
+                    Server server;
+                    if (toServerController.equalsIgnoreCase(serverController.getMainConfig().privateIP)) {
                         server = Server.getServers().get(toServerController + "." + fromServer);
                         if (server == null) {
-                            server = new Server(serverController, ServerInfo.getServerInfos().get(serverName), fromServer);
+                            server = new Server(serverController, ServerInfo.getServerInfos().get(serverName), serverUUID, fromServer);
                             Server.getServers().put(toServerController + "." + fromServer, server);
                         }
                     } else {
                         server = Server.getServers().get(toServerController + "." + fromServer);
                         if (server == null) {
-                            server = new RemoteServer(serverController, remoteController, fromServer, serverName);
+                            server = new RemoteServer(serverController, remoteController, fromServer, serverName, serverUUID);
                             Server.getServers().put(toServerController + "." + fromServer, server);
                         }
                     }

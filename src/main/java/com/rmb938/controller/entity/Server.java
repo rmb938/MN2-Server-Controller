@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class Server implements Runnable {
+public class Server {
 
     private static final Logger logger = LogManager.getLogger(Server.class.getName());
     private static ConcurrentHashMap<String, Server> servers = new ConcurrentHashMap<>();
@@ -47,20 +47,37 @@ public class Server implements Runnable {
         return infos;
     }
 
+    public static ArrayList<Server> getLocalServers() {
+        ArrayList<Server> localServers = new ArrayList<>();
+        for (Server server : servers.values()) {
+            if (server instanceof RemoteServer) {
+                continue;
+            }
+            localServers.add(server);
+        }
+        return localServers;
+    }
+
     private final ServerInfo serverInfo;
     private final MN2ServerController serverController;
+    private final String serverUUID;
     private final int port;
     private int currentPlayers;
     private long lastHeartbeat;
     private int beatsEmpty;
 
-    public Server(MN2ServerController serverController, ServerInfo serverInfo, int port) {
+    public Server(MN2ServerController serverController, ServerInfo serverInfo, String serverUUID, int port) {
         this.serverController = serverController;
         this.serverInfo = serverInfo;
+        this.serverUUID = serverUUID;
         this.port = port;
         currentPlayers = 0;
         lastHeartbeat = -1;//starting up
         beatsEmpty = 0;
+    }
+
+    public String getServerUUID() {
+        return serverUUID;
     }
 
     public int getPort() {
@@ -95,7 +112,7 @@ public class Server implements Runnable {
         this.currentPlayers = currentPlayers;
     }
 
-    public void run() {
+    public void startServer() {
         try {
             Runtime runtime = Runtime.getRuntime();
 
@@ -118,14 +135,22 @@ public class Server implements Runnable {
                 process.waitFor();
             }
 
-            //TODO: edit server.properties with port, IP and maxPlayers
+            process = runtime.exec(new String[]{"echo", "server-port="+port, ">>", "./runningServers/"+port+"/server.properties"});
+            process.waitFor();
+
+            process = runtime.exec(new String[]{"echo", "server-ip="+serverController.getMainConfig().privateIP, ">>", "./runningServers/"+port+"/server.properties"});
+            process.waitFor();
+
+            process = runtime.exec(new String[]{"echo", "max-players="+serverInfo.getMaxPlayers(), ">>", "./runningServers/"+port+"/server.properties"});
+            process.waitFor();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return;
         }
 
         Jedis jedis = JedisManager.getJedis();
-        jedis.set(MN2ServerController.getServerController().getControllerIP()+"."+port, serverInfo.getServerName());
+        jedis.set(serverController.getMainConfig().privateIP+"."+port, serverInfo.getServerName());
+        jedis.set(serverController.getMainConfig().privateIP+"."+port+".uuid", serverUUID);
         JedisManager.returnJedis(jedis);
 
         ProcessBuilder builder = new ProcessBuilder("screen", "-S", serverInfo.getServerName()+"."+port, "./runningServers/"+port+"/start.sh");
@@ -134,17 +159,11 @@ public class Server implements Runnable {
         logger.info("Running Server Process for " + port);
         try {
             builder.start();
-            Server.getServers().put(serverController.getControllerIP()+"."+port, this);
+            Server.getServers().put(serverController.getMainConfig().privateIP+"."+port, this);
         } catch (IOException e) {
             e.printStackTrace();
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
         }
-        Thread.yield();
-    }
-
-    public void startServer() {
-        Thread server = new Thread(this);
-        server.start();
     }
 
 }

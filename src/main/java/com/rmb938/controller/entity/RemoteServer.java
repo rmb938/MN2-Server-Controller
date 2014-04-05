@@ -19,8 +19,8 @@ public class RemoteServer extends Server {
 
     private final RemoteController remoteController;
 
-    public RemoteServer(MN2ServerController serverController, RemoteController remoteController, int port, String name) {
-        super(serverController, ServerInfo.getServerInfos().get(name), port);
+    public RemoteServer(MN2ServerController serverController, RemoteController remoteController, int port, String name, String serverUUID) {
+        super(serverController, ServerInfo.getServerInfos().get(name), serverUUID, port);
         this.remoteController = remoteController;
     }
 
