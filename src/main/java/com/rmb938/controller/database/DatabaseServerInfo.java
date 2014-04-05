@@ -4,6 +4,7 @@ import com.rmb938.controller.MN2ServerController;
 import com.rmb938.controller.entity.Bungee;
 import com.rmb938.controller.entity.Plugin;
 import com.rmb938.controller.entity.ServerInfo;
+import com.rmb938.controller.entity.World;
 import com.rmb938.database.DatabaseAPI;
 import org.apache.commons.dbutils.handlers.BeanListHandler;
 import org.apache.commons.dbutils.handlers.MapListHandler;
@@ -44,7 +45,7 @@ public class DatabaseServerInfo {
                     "`pluginId` int(11) NOT NULL," +
                     "UNIQUE KEY `serverId_2` (`serverId`,`pluginId`)," +
                     "KEY `serverId` (`serverId`)," +
-                    "KEY `pluginId` (`pluginId`)" +
+                    "KEY `pluginId` (`pluginId`)," +
                     "FOREIGN KEY (`pluginId`) REFERENCES `mn2_server_plugins` (`pluginId`)," +
                     "FOREIGN KEY (`serverId`) REFERENCES `mn2_server_info` (`serverId`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
@@ -52,8 +53,27 @@ public class DatabaseServerInfo {
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_bungee_plugins") == false) {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_bungee_plugins` (" +
                     "`pluginId` int(11) NOT NULL," +
-                    "UNIQUE KEY `pluginId` (`pluginId`)" +
+                    "UNIQUE KEY `pluginId` (`pluginId`)," +
                     "FOREIGN KEY (`pluginId`) REFERENCES `mn2_server_plugins` (`pluginId`)" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
+        }
+        if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_worlds") == false) {
+            DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_worlds` (" +
+                    "`worldId` int(11) NOT NULL AUTO_INCREMENT," +
+                    "`worldName` varchar(64) NOT NULL," +
+                    "PRIMARY KEY (`worldId`)," +
+                    "UNIQUE KEY `worldName` (`worldName`)" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1;");
+        }
+        if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info_worlds") == false) {
+            DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info_worlds` (" +
+                    "`serverId` int(11) NOT NULL," +
+                    "`worldId` int(11) NOT NULL," +
+                    "UNIQUE KEY `serverId_2` (`serverId`,`worldId`)," +
+                    "KEY `serverId` (`serverId`)," +
+                    "KEY `worldId` (`worldId`)," +
+                    "FOREIGN KEY (`worldId`) REFERENCES `mn2_server_worlds` (`worldId`)," +
+                    "FOREIGN KEY (`serverId`) REFERENCES `mn2_server_info` (`serverId`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
     }
@@ -63,6 +83,14 @@ public class DatabaseServerInfo {
         for (Object obj : beans) {
             Plugin plugin = (Plugin) obj;
             Plugin.getPlugins().put(plugin.getPluginId(), plugin);
+        }
+    }
+
+    public void loadWorlds() {
+        ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldId, worldName from `mn2_server_worlds`", new BeanListHandler<>(World.class));
+        for (Object obj : beans) {
+            World world = (World) obj;
+            World.getWorlds().put(world.getWorldId(), world);
         }
     }
 
@@ -80,6 +108,12 @@ public class DatabaseServerInfo {
                 Map map1 = (Map) obj1;
                 int pluginId = (Integer) map1.get("pluginId");
                 serverInfo.getPlugins().add(Plugin.getPlugins().get(pluginId));
+            }
+            beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldId from `mn2_server_info_worlds` where serverId='"+serverId+"'", new MapListHandler());
+            for (Object obj1 : beans1) {
+                Map map1 = (Map) obj1;
+                int worldId = (Integer) map1.get("worldId");
+                serverInfo.getWorlds().add(World.getWorlds().get(worldId));
             }
             ServerInfo.getServerInfos().put(serverName, serverInfo);
         }

@@ -51,6 +51,7 @@ public class MN2ServerController {
         logger.info("Loading Server Info");
         DatabaseServerInfo databaseServerInfo = new DatabaseServerInfo(this);
         databaseServerInfo.loadPlugins();
+        databaseServerInfo.loadWorlds();
         databaseServerInfo.loadServerInfo();
         Bungee bungee = databaseServerInfo.loadBungeeInfo();
 

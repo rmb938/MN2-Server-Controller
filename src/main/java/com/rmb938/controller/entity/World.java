@@ -4,19 +4,28 @@ import java.util.HashMap;
 
 public class World {
 
-    private static HashMap<String, World> worlds = new HashMap<>();
+    private static HashMap<Integer, World> worlds = new HashMap<>();
 
-    public static HashMap<String, World> getWorlds() {
+    public static HashMap<Integer, World> getWorlds() {
         return worlds;
     }
 
+    private int worldId;
     private String worldName;
 
-    public World(String worldName) {
-        this.worldName = worldName;
+    public int getWorldId() {
+        return worldId;
+    }
+
+    public void setWorldId(int worldId) {
+        this.worldId = worldId;
     }
 
     public String getWorldName() {
         return worldName;
+    }
+
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
     }
 }
