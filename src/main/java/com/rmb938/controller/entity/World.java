@@ -1,31 +1,30 @@
 package com.rmb938.controller.entity;
 
+import com.rmb938.controller.config.WorldConfig;
+
 import java.util.HashMap;
 
 public class World {
 
-    private static HashMap<Integer, World> worlds = new HashMap<>();
+    private static HashMap<String, World> worlds = new HashMap<>();
 
-    public static HashMap<Integer, World> getWorlds() {
+    public static HashMap<String, World> getWorlds() {
         return worlds;
     }
 
-    private int worldId;
-    private String worldName;
+    private final String worldName;
+    private final WorldConfig worldConfig;
 
-    public int getWorldId() {
-        return worldId;
-    }
-
-    public void setWorldId(int worldId) {
-        this.worldId = worldId;
+    public World(String worldName, WorldConfig worldConfig) {
+        this.worldName = worldName;
+        this.worldConfig = worldConfig;
     }
 
     public String getWorldName() {
         return worldName;
     }
 
-    public void setWorldName(String worldName) {
-        this.worldName = worldName;
+    public WorldConfig getWorldConfig() {
+        return worldConfig;
     }
 }

@@ -112,7 +112,15 @@ public class Server {
         this.currentPlayers = currentPlayers;
     }
 
-    public void startServer() {
+    public boolean startServer() {
+        if (serverInfo.getWorlds().isEmpty()) {
+            logger.error("There are no worlds set for "+serverInfo.getServerName()+" FIX THIS!");
+            return false;
+        }
+        if (serverInfo.getPlugins().isEmpty()) {
+            logger.error("There are no plugins set for "+serverInfo.getServerName()+" FIX THIS!");
+            return false;
+        }
         try {
             Runtime runtime = Runtime.getRuntime();
 
@@ -143,9 +151,20 @@ public class Server {
 
             process = runtime.exec(new String[]{"echo", "max-players="+serverInfo.getMaxPlayers(), ">>", "./runningServers/"+port+"/server.properties"});
             process.waitFor();
+
+            World mainWorld = serverInfo.getWorlds().get(0);
+            for (World world : serverInfo.getWorlds()) {
+                if (world.getWorldConfig().mainWorld == true) {
+                    mainWorld = world;
+                    break;
+                }
+            }
+
+            process = runtime.exec(new String[]{"echo", "level-name="+mainWorld.getWorldName(), ">>", "./runningServers/"+port+"/server.properties"});
+            process.waitFor();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
-            return;
+            return false;
         }
 
         Jedis jedis = JedisManager.getJedis();
@@ -163,7 +182,9 @@ public class Server {
         } catch (IOException e) {
             e.printStackTrace();
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
+            return false;
         }
+        return true;
     }
 
 }

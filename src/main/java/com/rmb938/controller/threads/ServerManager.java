@@ -59,18 +59,23 @@ public class ServerManager implements Runnable {
                 if (size > 0) {
                     int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServers().size();
                     if (canMake > 0) {
+                        int failedMake = 0;
                         for (int i = 0; i < canMake; i++) {
                             //TODO: find port for new server
                             int port = -1;
                             Server server = new Server(serverController, serverInfo, UUID.randomUUID().toString(), port);
-                            server.startServer();
+                            boolean success = server.startServer();
+                            if (success == false) {
+                                failedMake += 1;
+                            }
                         }
-                        int finalSize = size - canMake;
-                        if (finalSize == 0) {
-                            jedis.set(serverInfo.getServerName(), finalSize + "");
+                        size -= canMake;
+                        size += failedMake;
+                        if (size == 0) {
+                            jedis.set(serverInfo.getServerName(), size + "");
                             jedis.expire(serverInfo.getServerName(), 30000);
                         } else {
-                            jedis.set(serverInfo.getServerName(), finalSize + "");
+                            jedis.set(serverInfo.getServerName(), size + "");
                         }
                     }
                 }
