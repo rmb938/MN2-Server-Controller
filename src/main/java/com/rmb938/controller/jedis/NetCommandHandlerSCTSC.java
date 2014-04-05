@@ -43,6 +43,8 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
                     if (remoteController == null) {
                         remoteController = new RemoteController(fromServerController);
                         RemoteController.getRemoteControllers().put(fromServerController,remoteController);
+                        logger.info("Adding "+remoteController.getIP()+" to the cloud.");
+                        logger.info("Main Controller: "+RemoteController.getMainController().getIP());
                     }
                     remoteController.setLastHeartbeat(System.currentTimeMillis());
                     remoteController.setControllerID(id);

@@ -21,7 +21,7 @@ public class DatabaseServerInfo {
         createTable();
     }
 
-    public void createTable() {
+    private void createTable() {
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info") == false) {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info` (" +
                     "`serverId` int(11) NOT NULL AUTO_INCREMENT," +
@@ -61,7 +61,7 @@ public class DatabaseServerInfo {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info_worlds` (" +
                     "`serverId` int(11) NOT NULL," +
                     "`worldName` int(11) NOT NULL," +
-                    "UNIQUE KEY `serverId_2` (`serverId`,`worldId`)," +
+                    "UNIQUE KEY `serverId_2` (`serverId`,`worldName`)," +
                     "KEY `serverId` (`serverId`)," +
                     "KEY `worldName` (`worldName`)," +
                     "FOREIGN KEY (`serverId`) REFERENCES `mn2_server_info` (`serverId`)" +

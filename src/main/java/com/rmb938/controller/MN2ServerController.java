@@ -7,6 +7,7 @@ import com.rmb938.controller.database.DatabaseServerInfo;
 import com.rmb938.controller.entity.Bungee;
 import com.rmb938.controller.entity.World;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
+import com.rmb938.controller.jedis.NetCommandHandlerSTSC;
 import com.rmb938.controller.threads.ConsoleInput;
 import com.rmb938.controller.threads.ServerManager;
 import com.rmb938.database.DatabaseAPI;
@@ -27,7 +28,6 @@ public class MN2ServerController {
     public static void main(String[] args) {
         logger.info("Starting Server Controller");
         new MN2ServerController();
-
     }
 
     private final UUID controllerId;
@@ -108,6 +108,7 @@ public class MN2ServerController {
         JedisManager.connectToRedis(mainConfig.redis_address);
         JedisManager.setUpDelegates();
         new NetCommandHandlerSCTSC(this);
+        new NetCommandHandlerSTSC(this);
 
         logger.info("Loading Worlds");
         for (File worldFolder : worldsFolder.listFiles()) {
@@ -168,6 +169,7 @@ public class MN2ServerController {
             @Override
             public void run() {
                 while (true) {
+                    logger.info("Sending beat");
                     NetCommandSCTSC netCommandSCTSC = new NetCommandSCTSC("heartbeat", mainConfig.privateIP, "*");
                     netCommandSCTSC.addArg("id", controllerId);
                     netCommandSCTSC.flush();
