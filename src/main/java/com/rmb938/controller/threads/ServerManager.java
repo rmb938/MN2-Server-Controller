@@ -68,8 +68,10 @@ public class ServerManager implements Runnable {
                         logger.info("Making "+canMake+" "+serverInfo.getServerName());
                         int failedMake = 0;
                         for (int i = 0; i < canMake; i++) {
-                            //TODO: find port for new server
-                            int port = -1;
+                            int port = 25566;
+                            while (Server.getLocalServer(port) != null) {
+                                port += 1;
+                            }
                             Server server = new Server(serverController, serverInfo, UUID.randomUUID().toString(), port);
                             boolean success = server.startServer();
                             if (success == false) {

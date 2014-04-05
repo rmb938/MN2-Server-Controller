@@ -20,6 +20,15 @@ public class Server {
         return servers;
     }
 
+    public static Server getLocalServer(int port) {
+        for (Server server : getLocalServers()) {
+            if (server.getPort() == port) {
+                return server;
+            }
+        }
+        return null;
+    }
+
     public static ArrayList<Server> getServers(ServerInfo serverInfo) {
         ArrayList<Server> servers1 = new ArrayList<>();
         for (Server server : servers.values()) {
