@@ -25,6 +25,12 @@ public class ServerManager implements Runnable {
 
     public void run() {
         while (true) {
+            if (serverController.getBungee().getLastHeartBeat() + 60000 < System.currentTimeMillis() && serverController.getBungee().getLastHeartBeat() > 0) {
+                logger.info("Restarting Bungee Instance. Must of crashed.");
+                serverController.getBungee().startBungee();
+                serverController.getBungee().setLastHeartBeat(-1);
+            }
+
             //Remove timed out servers
             ArrayList<String> toRemove = new ArrayList<>();
             for (String serverUUID : Server.getServers().keySet()) {
@@ -59,6 +65,7 @@ public class ServerManager implements Runnable {
                 if (size > 0) {
                     int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServers().size();
                     if (canMake > 0) {
+                        logger.info("Making "+canMake+" "+serverInfo.getServerName());
                         int failedMake = 0;
                         for (int i = 0; i < canMake; i++) {
                             //TODO: find port for new server
@@ -66,6 +73,7 @@ public class ServerManager implements Runnable {
                             Server server = new Server(serverController, serverInfo, UUID.randomUUID().toString(), port);
                             boolean success = server.startServer();
                             if (success == false) {
+                                logger.info("Failed to make "+serverInfo.getServerName());
                                 failedMake += 1;
                             }
                         }
@@ -84,7 +92,7 @@ public class ServerManager implements Runnable {
             }
 
             if (RemoteController.getMainController() != null) {
-                if (RemoteController.getMainController().getIP().equalsIgnoreCase(serverController.getMainConfig().privateIP)) {
+                if (RemoteController.getMainController().getControllerID() == serverController.getControllerId()) {
                     //Start up more servers if less then min needed
                     for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                         Jedis jedis = JedisManager.getJedis();
@@ -95,7 +103,9 @@ public class ServerManager implements Runnable {
                         }
                         int size = Server.getServers(serverInfo).size();
                         if (serverInfo.getMinServers() > size) {
-                            jedis.set(serverInfo.getServerName(), serverInfo.getMinServers() - size+"");
+                            int need = serverInfo.getMinServers() - size;
+                            logger.info(need+" of "+serverInfo.getServerName());
+                            jedis.set(serverInfo.getServerName(), need+"");
                         }
                         JedisManager.returnJedis(jedis);
                     }
@@ -108,6 +118,7 @@ public class ServerManager implements Runnable {
                             logger.warn("Waiting to create "+size+" servers of "+serverInfo.getServerName()+" if this continues please check server status.");
                             continue;
                         }
+                        logger.info("Load Balance more "+serverInfo.getServerName());
                         jedis.set(serverInfo.getServerName(), "3");
                         JedisManager.returnJedis(jedis);
                     }
@@ -120,6 +131,7 @@ public class ServerManager implements Runnable {
                         }
                         for (Server server : servers) {
                             if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
+                                logger.info("Load Balance remove "+serverInfo.getServerName());
                                 NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, server.getServerUUID());
                                 netCommandSCTS.flush();
                                 server.setLastHeartbeat(-2);

@@ -1,7 +1,6 @@
 package com.rmb938.controller.jedis;
 
 import com.rmb938.controller.MN2ServerController;
-import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.jedis.net.NetChannel;
 import com.rmb938.jedis.net.NetCommandHandler;
 import org.apache.logging.log4j.LogManager;
@@ -10,15 +9,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.HashMap;
-import java.util.UUID;
 
-public class NetCommandHandlerSCTSC extends NetCommandHandler {
+public class NetCommandHandlerBTSC extends NetCommandHandler {
 
     private static final Logger logger = LogManager.getLogger(NetCommandHandlerSCTSC.class.getName());
     private final MN2ServerController serverController;
 
-    public NetCommandHandlerSCTSC(MN2ServerController serverController) {
-        NetCommandHandler.addHandler(NetChannel.SERVER_CONTROLLER_TO_SERVER_CONTROLLER, this);
+    public NetCommandHandlerBTSC(MN2ServerController serverController) {
+        NetCommandHandler.addHandler(NetChannel.BUNGEE_TO_SERVER_CONTROLLER, this);
         this.serverController = serverController;
     }
 
@@ -38,18 +36,7 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
             HashMap<String, Object> objectHashMap = objectToHashMap(jsonObject.getJSONObject("data"));
             switch (command) {
                 case "heartbeat":
-                    UUID id = UUID.fromString((String) objectHashMap.get("id"));
-                    RemoteController remoteController = RemoteController.getRemoteControllers().get(fromServerController);
-                    if (remoteController == null) {
-                        remoteController = new RemoteController(fromServerController, id);
-                        remoteController.setLastHeartbeat(System.currentTimeMillis());
-                        RemoteController.getRemoteControllers().put(fromServerController,remoteController);
-                        logger.info("Adding "+remoteController.getIP()+" to the cloud.");
-                        logger.info("Main Controller: "+RemoteController.getMainController().getIP());
-                    } else {
-                        remoteController.setLastHeartbeat(System.currentTimeMillis());
-                    }
-
+                    serverController.getBungee().setLastHeartBeat(System.currentTimeMillis());
                     break;
                 default:
                     logger.info("Unknown SCTCS Command MN2ServerController " + command);

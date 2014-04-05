@@ -32,18 +32,15 @@ public class RemoteController {
 
     private final String IP;
     private long lastHeartbeat = -1;
-    private UUID controllerID;
+    private final UUID controllerID;
 
-    public RemoteController(String IP) {
+    public RemoteController(String IP, UUID controllerID) {
         this.IP = IP;
+        this.controllerID = controllerID;
     }
 
     public UUID getControllerID() {
         return controllerID;
-    }
-
-    public void setControllerID(UUID controllerID) {
-        this.controllerID = controllerID;
     }
 
     public long getLastHeartbeat() {

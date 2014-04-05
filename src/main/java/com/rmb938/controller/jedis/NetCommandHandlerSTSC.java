@@ -30,12 +30,6 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
             int fromServer = jsonObject.getInt("from");
             String toServerController = jsonObject.getString("to");
 
-            RemoteController remoteController = RemoteController.getRemoteControllers().get(toServerController);
-            if (remoteController == null) {
-                remoteController = new RemoteController(toServerController);
-                RemoteController.getRemoteControllers().put(toServerController, remoteController);
-            }
-
             String command = jsonObject.getString("command");
             HashMap<String, Object> objectHashMap = objectToHashMap(jsonObject.getJSONObject("data"));
             switch (command) {
@@ -53,12 +47,16 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                     } else {
                         server = Server.getServers().get(toServerController + "." + fromServer);
                         if (server == null) {
+                            RemoteController remoteController = RemoteController.getRemoteControllers().get(toServerController);
+                            if (remoteController == null) {
+                                break;
+                            }
                             server = new RemoteServer(serverController, remoteController, fromServer, serverName, serverUUID);
                             Server.getServers().put(toServerController + "." + fromServer, server);
                         }
                     }
                     if (server.getLastHeartbeat() == -2) {
-                        return;
+                        break;
                     }
 
                     server.setCurrentPlayers(currentPlayers);

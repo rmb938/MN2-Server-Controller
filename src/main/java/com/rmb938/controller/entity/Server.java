@@ -172,7 +172,7 @@ public class Server {
         jedis.set(serverController.getMainConfig().privateIP+"."+port+".uuid", serverUUID);
         JedisManager.returnJedis(jedis);
 
-        ProcessBuilder builder = new ProcessBuilder("screen", "-S", serverInfo.getServerName()+"."+port, "./runningServers/"+port+"/start.sh");
+        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh");
         builder.directory(new File("./runningServers/"+port));//sets working directory
 
         logger.info("Running Server Process for " + port);
@@ -180,8 +180,8 @@ public class Server {
             builder.start();
             Server.getServers().put(serverController.getMainConfig().privateIP+"."+port, this);
         } catch (IOException e) {
-            e.printStackTrace();
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
+            logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return false;
         }
         return true;

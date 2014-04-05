@@ -5,10 +5,11 @@ import com.rmb938.controller.config.MainConfig;
 import com.rmb938.controller.config.WorldConfig;
 import com.rmb938.controller.database.DatabaseServerInfo;
 import com.rmb938.controller.entity.Bungee;
+import com.rmb938.controller.entity.Plugin;
 import com.rmb938.controller.entity.World;
+import com.rmb938.controller.jedis.NetCommandHandlerBTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSTSC;
-import com.rmb938.controller.threads.ConsoleInput;
 import com.rmb938.controller.threads.ServerManager;
 import com.rmb938.database.DatabaseAPI;
 import com.rmb938.jedis.JedisManager;
@@ -32,6 +33,7 @@ public class MN2ServerController {
 
     private final UUID controllerId;
     private final MainConfig mainConfig;
+    private Bungee bungee;
 
     public MN2ServerController() {
         this.controllerId = UUID.randomUUID();
@@ -109,6 +111,7 @@ public class MN2ServerController {
         JedisManager.setUpDelegates();
         new NetCommandHandlerSCTSC(this);
         new NetCommandHandlerSTSC(this);
+        new NetCommandHandlerBTSC(this);
 
         logger.info("Loading Worlds");
         for (File worldFolder : worldsFolder.listFiles()) {
@@ -128,13 +131,25 @@ public class MN2ServerController {
             World.getWorlds().put(worldFolder.getName(), world);
         }
 
+        logger.info("Loading Plugins");
+        for (File pluginFolder : pluginsFolder.listFiles()) {
+            if (pluginFolder.isDirectory() == false) {
+                continue;
+            }
+            if (pluginFolder.listFiles().length == 0) {
+                logger.warn("Cannot load plugin "+pluginFolder.getName()+" no plugin files.");
+                continue;
+            }
+            Plugin plugin = new Plugin(pluginFolder.getName());
+            Plugin.getPlugins().put(plugin.getPluginName(), plugin);
+        }
+
         logger.info("Connecting to MySQL");
         DatabaseAPI.initializeMySQL(mainConfig.mySQL_userName, mainConfig.mySQL_password, mainConfig.mySQL_database, mainConfig.mySQL_address, mainConfig.mySQL_port);
         logger.info("Loading Server Info");
         DatabaseServerInfo databaseServerInfo = new DatabaseServerInfo(this);
-        databaseServerInfo.loadPlugins();
         databaseServerInfo.loadServerInfo();
-        Bungee bungee = databaseServerInfo.loadBungeeInfo();
+        bungee = databaseServerInfo.loadBungeeInfo();
 
         logger.info("Starting Heartbeat");
         heartbeat();
@@ -146,14 +161,17 @@ public class MN2ServerController {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
         }
 
-        logger.info("Starting Bungee Instance");
-        bungee.startBungee();
-
-        logger.info("Starting Console Input");
-        new ConsoleInput();
+        if (bungee.getLastHeartBeat() == -1) {
+            logger.info("Starting Bungee Instance");
+            bungee.startBungee();
+        }
 
         logger.info("Starting Server Manager");
         new ServerManager(this);
+    }
+
+    public Bungee getBungee() {
+        return bungee;
     }
 
     public MainConfig getMainConfig() {

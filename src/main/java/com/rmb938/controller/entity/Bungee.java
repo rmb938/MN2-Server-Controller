@@ -10,15 +10,23 @@ import java.util.ArrayList;
 
 public class Bungee implements Runnable {
 
+    private static final Logger logger = LogManager.getLogger(Bungee.class.getName());
     private MN2ServerController serverController;
+    private long lastHeartBeat;
+    private ArrayList<Plugin> plugins = new ArrayList<>();
 
     public Bungee(MN2ServerController serverController) {
         this.serverController = serverController;
+        this.lastHeartBeat = -1;
     }
 
-    private static final Logger logger = LogManager.getLogger(Bungee.class.getName());
+    public long getLastHeartBeat() {
+        return lastHeartBeat;
+    }
 
-    private ArrayList<Plugin> plugins = new ArrayList<>();
+    public void setLastHeartBeat(long lastHeartBeat) {
+        this.lastHeartBeat = lastHeartBeat;
+    }
 
     public ArrayList<Plugin> getPlugins() {
         return plugins;
@@ -42,17 +50,17 @@ public class Bungee implements Runnable {
                 process.waitFor();
             }
 
-            process = runtime.exec(new String[] {"sed", "-i", "'s/", "a.a.a.a/", serverController.getMainConfig().publicIP+"/'", "./runningServers/bungee/config.yml"});
+            process = runtime.exec(new String[] {"sed", "-i", "s/a.a.a.a/"+serverController.getMainConfig().publicIP+"/", "./runningServers/bungee/config.yml"});
             process.waitFor();
 
-            process = runtime.exec(new String[] {"sed", "-i", "'s/", "b.b.b.b/", serverController.getMainConfig().privateIP+"/'", "./runningServers/bungee/config.yml"});
+            process = runtime.exec(new String[] {"sed", "-i", "s/b.b.b.b/"+serverController.getMainConfig().privateIP+"/", "./runningServers/bungee/config.yml"});
             process.waitFor();
         } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+            logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return;
         }
 
-        ProcessBuilder builder = new ProcessBuilder("screen", "-S", "bungee", "./runningServers/bungee/start.sh");
+        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", "bungee", "./start.sh");
         builder.directory(new File("./runningServers/bungee"));//sets working directory
 
         logger.info("Running Bungee Process");
