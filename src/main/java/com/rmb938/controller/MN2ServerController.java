@@ -2,6 +2,7 @@ package com.rmb938.controller;
 
 
 import com.rmb938.controller.config.MainConfig;
+import com.rmb938.controller.database.DatabaseServerInfo;
 import com.rmb938.controller.entity.Bungee;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
 import com.rmb938.controller.threads.ConsoleInput;
@@ -45,10 +46,13 @@ public class MN2ServerController {
         JedisManager.setUpDelegates();
         new NetCommandHandlerSCTSC(this);
 
-        //TODO: connect to mysql and read servers
         logger.info("Connecting to MySQL");
         DatabaseAPI.initializeMySQL(mainConfig.mySQL_userName, mainConfig.mySQL_password, mainConfig.mySQL_database, mainConfig.mySQL_address, mainConfig.mySQL_port);
         logger.info("Loading Server Info");
+        DatabaseServerInfo databaseServerInfo = new DatabaseServerInfo(this);
+        databaseServerInfo.loadPlugins();
+        databaseServerInfo.loadServerInfo();
+        Bungee bungee = databaseServerInfo.loadBungeeInfo();
 
         logger.info("Starting Heartbeat");
         heartbeat();
@@ -60,11 +64,14 @@ public class MN2ServerController {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
         }
 
-        new ConsoleInput();
-        new ServerManager(this);
-
-        Bungee bungee = new Bungee();
+        logger.info("Starting Bungee Instance");
         bungee.startBungee();
+
+        logger.info("Starting Console Input");
+        new ConsoleInput();
+
+        logger.info("Starting Server Manager");
+        new ServerManager(this);
     }
 
     public MainConfig getMainConfig() {

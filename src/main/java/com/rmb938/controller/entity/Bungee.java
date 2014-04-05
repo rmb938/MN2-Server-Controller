@@ -1,5 +1,6 @@
 package com.rmb938.controller.entity;
 
+import com.rmb938.controller.MN2ServerController;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,9 +10,19 @@ import java.util.ArrayList;
 
 public class Bungee implements Runnable {
 
+    private MN2ServerController serverController;
+
+    public Bungee(MN2ServerController serverController) {
+        this.serverController = serverController;
+    }
+
     private static final Logger logger = LogManager.getLogger(Bungee.class.getName());
 
     private ArrayList<Plugin> plugins = new ArrayList<>();
+
+    public ArrayList<Plugin> getPlugins() {
+        return plugins;
+    }
 
     public void run() {
         try {
@@ -23,7 +34,7 @@ public class Bungee implements Runnable {
             process = runtime.exec(new String[]{"mkdir", "./runningServers/bungee"});
             process.waitFor();
 
-            process = runtime.exec(new String[]{"rsync", "-a", "./server/spigot/", "./runningServers/bungee/"});
+            process = runtime.exec(new String[]{"rsync", "-a", "./server/bungee/", "./runningServers/bungee/"});
             process.waitFor();
 
             for (Plugin plugin : plugins) {
@@ -31,7 +42,11 @@ public class Bungee implements Runnable {
                 process.waitFor();
             }
 
-            process = runtime.exec(new String[] {"sed", "-i", ""});
+            process = runtime.exec(new String[] {"sed", "-i", "'s/", "a.a.a.a/", serverController.getMainConfig().publicIP+"/'", "./runningServers/bungee/config.yml"});
+            process.waitFor();
+
+            process = runtime.exec(new String[] {"sed", "-i", "'s/", "b.b.b.b/", serverController.getMainConfig().privateIP+"/'", "./runningServers/bungee/config.yml"});
+            process.waitFor();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return;

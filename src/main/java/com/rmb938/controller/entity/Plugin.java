@@ -4,19 +4,28 @@ import java.util.HashMap;
 
 public class Plugin {
 
-    private static HashMap<String, Plugin> plugins = new HashMap<>();
+    private static HashMap<Integer, Plugin> plugins = new HashMap<>();
 
-    public static HashMap<String, Plugin> getPlugins() {
+    public static HashMap<Integer, Plugin> getPlugins() {
         return plugins;
     }
 
-    private final String pluginName;
+    private int pluginId;
+    private String pluginName;
 
-    public Plugin(String pluginName) {
-        this.pluginName = pluginName;
+    public int getPluginId() {
+        return pluginId;
+    }
+
+    public void setPluginId(int pluginId) {
+        this.pluginId = pluginId;
     }
 
     public String getPluginName() {
         return pluginName;
+    }
+
+    public void setPluginName(String pluginName) {
+        this.pluginName = pluginName;
     }
 }
