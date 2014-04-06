@@ -33,6 +33,10 @@ public class Bungee implements Runnable {
     }
 
     public void run() {
+        if (getPlugins().isEmpty()) {
+            logger.error("There are no plugins set for bungee FIX THIS!");
+            return;
+        }
         try {
             Runtime runtime = Runtime.getRuntime();
 

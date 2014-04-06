@@ -23,11 +23,10 @@ public class NetCommandHandlerBTSC extends NetCommandHandler {
     @Override
     public void handle(JSONObject jsonObject) {
         try {
-            String fromServerController = jsonObject.getString("from");
-            String toServerController = jsonObject.getString("to");
+            String fromBungee = jsonObject.getString("from");
 
-            if (toServerController.equalsIgnoreCase("*") == false) {
-                if (toServerController.equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
+            if (fromBungee.equalsIgnoreCase("*") == false) {
+                if (fromBungee.equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
                     return;
                 }
             }

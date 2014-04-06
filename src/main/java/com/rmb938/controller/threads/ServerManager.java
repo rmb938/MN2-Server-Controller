@@ -32,6 +32,7 @@ public class ServerManager implements Runnable {
             }
 
             //Remove timed out servers
+            logger.info("Checking Timed Out Servers");
             ArrayList<String> toRemove = new ArrayList<>();
             for (String serverUUID : Server.getServers().keySet()) {
                 Server server = Server.getServers().get(serverUUID);
@@ -43,6 +44,7 @@ public class ServerManager implements Runnable {
                 Server.getServers().remove(serverName);
             }
 
+            logger.info("Checking if Servers need to be created");
             for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                 Jedis jedis = JedisManager.getJedis();
                 if (jedis.exists(serverInfo.getServerName()) == false) {
@@ -54,20 +56,21 @@ public class ServerManager implements Runnable {
                         time = Long.parseLong(jedis.getSet("lock."+serverInfo.getServerName(), System.currentTimeMillis()+30000+""));
                         if (System.currentTimeMillis() < time) {
                             JedisManager.returnJedis(jedis);
-                            return;
+                            continue;
                         }
                     } else {
                         JedisManager.returnJedis(jedis);
-                        return;
+                        continue;
                     }
                 }
                 int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
                 if (size > 0) {
                     int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServers().size();
                     if (canMake > 0) {
-                        logger.info("Making "+canMake+" "+serverInfo.getServerName());
+                        int needMake = canMake >= size ? size : size - canMake;
+                        logger.info("Making "+needMake+" "+serverInfo.getServerName());
                         int failedMake = 0;
-                        for (int i = 0; i < canMake; i++) {
+                        for (int i = 0; i < needMake; i++) {
                             int port = 25566;
                             while (Server.getLocalServer(port) != null) {
                                 port += 1;
@@ -75,11 +78,11 @@ public class ServerManager implements Runnable {
                             Server server = new Server(serverController, serverInfo, UUID.randomUUID().toString(), port);
                             boolean success = server.startServer();
                             if (success == false) {
-                                logger.info("Failed to make "+serverInfo.getServerName());
+                                logger.info("Failed to make " + serverInfo.getServerName());
                                 failedMake += 1;
                             }
                         }
-                        size -= canMake;
+                        size -= needMake;
                         size += failedMake;
                         if (size == 0) {
                             jedis.set(serverInfo.getServerName(), size + "");
@@ -93,17 +96,22 @@ public class ServerManager implements Runnable {
                 JedisManager.returnJedis(jedis);
             }
 
+            logger.info("Checking Main Controller");
             if (RemoteController.getMainController() != null) {
-                if (RemoteController.getMainController().getControllerID() == serverController.getControllerId()) {
+                if (RemoteController.getMainController().getControllerID().compareTo(serverController.getControllerId()) == 0) {
+                    logger.info("Main Controller Management");
                     //Start up more servers if less then min needed
                     for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                         Jedis jedis = JedisManager.getJedis();
                         if (jedis.exists(serverInfo.getServerName())) {
                             int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                            logger.warn("Waiting to create "+size+" servers of "+serverInfo.getServerName()+" if this continues please check server status.");
+                            if (size != 0) {
+                                logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
+                            }
                             continue;
                         }
                         int size = Server.getServers(serverInfo).size();
+                        logger.info("Currently "+size+" of "+serverInfo.getServerName());
                         if (serverInfo.getMinServers() > size) {
                             int need = serverInfo.getMinServers() - size;
                             logger.info(need+" of "+serverInfo.getServerName());
@@ -117,7 +125,9 @@ public class ServerManager implements Runnable {
                         Jedis jedis = JedisManager.getJedis();
                         if (jedis.exists(serverInfo.getServerName())) {
                             int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                            logger.warn("Waiting to create "+size+" servers of "+serverInfo.getServerName()+" if this continues please check server status.");
+                            if (size != 0) {
+                                logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
+                            }
                             continue;
                         }
                         logger.info("Load Balance more "+serverInfo.getServerName());

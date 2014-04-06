@@ -7,11 +7,15 @@ import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.controller.entity.World;
 import com.rmb938.database.DatabaseAPI;
 import org.apache.commons.dbutils.handlers.MapListHandler;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.Map;
 
 public class DatabaseServerInfo {
+
+    private static final Logger logger = LogManager.getLogger(DatabaseServerInfo.class.getName());
 
     private final MN2ServerController serverController;
 
@@ -72,14 +76,24 @@ public class DatabaseServerInfo {
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
                 String pluginName = (String) map1.get("pluginName");
-                serverInfo.getPlugins().add(Plugin.getPlugins().get(pluginName));
+                Plugin plugin = Plugin.getPlugins().get(pluginName);
+                if (plugin == null) {
+                    logger.warn("Could not load plugin "+pluginName+" into bungee plugin is null.");
+                }
+                serverInfo.getPlugins().add(plugin);
             }
             beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldName from `mn2_server_info_worlds` where serverId='"+serverId+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
                 String worldName = (String) map1.get("worldName");
-                serverInfo.getWorlds().add(World.getWorlds().get(worldName));
+                World world = World.getWorlds().get(worldName);
+                if (world == null) {
+                    logger.warn("Could not load world "+worldName+" into server "+serverInfo.getServerName()+" world is null.");
+                    continue;
+                }
+                serverInfo.getWorlds().add(world);
             }
+            logger.info("Loaded "+serverName+" server info");
             ServerInfo.getServerInfos().put(serverName, serverInfo);
         }
     }
@@ -90,7 +104,11 @@ public class DatabaseServerInfo {
         for (Object obj : beans) {
             Map map = (Map) obj;
             String pluginName = (String) map.get("pluginName");
-            bungee.getPlugins().add(Plugin.getPlugins().get(pluginName));
+            Plugin plugin = Plugin.getPlugins().get(pluginName);
+            if (plugin == null) {
+                logger.warn("Could not load plugin "+pluginName+" into bungee plugin is null.");
+            }
+            bungee.getPlugins().add(plugin);
         }
         return bungee;
     }

@@ -161,12 +161,17 @@ public class Server {
             process = runtime.exec(new String[]{"echo", "max-players="+serverInfo.getMaxPlayers(), ">>", "./runningServers/"+port+"/server.properties"});
             process.waitFor();
 
-            World mainWorld = serverInfo.getWorlds().get(0);
+            World mainWorld = null;
             for (World world : serverInfo.getWorlds()) {
                 if (world.getWorldConfig().mainWorld == true) {
                     mainWorld = world;
                     break;
                 }
+            }
+
+            if (mainWorld == null) {
+                logger.error("Could not find main world for server "+serverInfo.getServerName());
+                return false;
             }
 
             process = runtime.exec(new String[]{"echo", "level-name="+mainWorld.getWorldName(), ">>", "./runningServers/"+port+"/server.properties"});

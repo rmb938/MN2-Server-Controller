@@ -106,13 +106,6 @@ public class MN2ServerController {
             return;
         }
 
-        logger.info("Connecting to Redis");
-        JedisManager.connectToRedis(mainConfig.redis_address);
-        JedisManager.setUpDelegates();
-        new NetCommandHandlerSCTSC(this);
-        new NetCommandHandlerSTSC(this);
-        new NetCommandHandlerBTSC(this);
-
         logger.info("Loading Worlds");
         for (File worldFolder : worldsFolder.listFiles()) {
             if (worldFolder.isDirectory() == false) {
@@ -128,7 +121,8 @@ public class MN2ServerController {
                 continue;
             }
             World world = new World(worldFolder.getName(), worldConfig);
-            World.getWorlds().put(worldFolder.getName(), world);
+            logger.info("Loaded World "+world.getWorldName());
+            World.getWorlds().put(world.getWorldName(), world);
         }
 
         logger.info("Loading Plugins");
@@ -151,6 +145,13 @@ public class MN2ServerController {
         databaseServerInfo.loadServerInfo();
         bungee = databaseServerInfo.loadBungeeInfo();
 
+        logger.info("Connecting to Redis");
+        JedisManager.connectToRedis(mainConfig.redis_address);
+        JedisManager.setUpDelegates();
+        new NetCommandHandlerSCTSC(this);
+        new NetCommandHandlerSTSC(this);
+        new NetCommandHandlerBTSC(this);
+
         logger.info("Starting Heartbeat");
         heartbeat();
 
@@ -167,7 +168,8 @@ public class MN2ServerController {
         }
 
         logger.info("Starting Server Manager");
-        new ServerManager(this);
+        ServerManager serverManager = new ServerManager(this);
+        serverManager.startServerManager();
     }
 
     public Bungee getBungee() {
@@ -189,7 +191,7 @@ public class MN2ServerController {
                 while (true) {
                     logger.info("Sending beat");
                     NetCommandSCTSC netCommandSCTSC = new NetCommandSCTSC("heartbeat", mainConfig.privateIP, "*");
-                    netCommandSCTSC.addArg("id", controllerId);
+                    netCommandSCTSC.addArg("id", controllerId.toString());
                     netCommandSCTSC.flush();
                     try {
                         Thread.sleep(5000);
