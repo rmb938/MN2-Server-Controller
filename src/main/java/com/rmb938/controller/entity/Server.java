@@ -7,17 +7,21 @@ import org.apache.logging.log4j.Logger;
 import redis.clients.jedis.Jedis;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
 
     private static final Logger logger = LogManager.getLogger(Server.class.getName());
-    private static ConcurrentHashMap<String, Server> servers = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, Server> servers = new ConcurrentHashMap<>();
 
     public static ConcurrentHashMap<String, Server> getServers() {
-        return servers;
+        synchronized (servers) {
+            return servers;
+        }
     }
 
     public static Server getLocalServer(int port) {
@@ -45,7 +49,8 @@ public class Server {
             int full = 0;
             ArrayList<Server> servers = getServers(serverInfo);
             for (Server server : servers) {
-                if (((server.getCurrentPlayers()/server.getServerInfo().getMaxPlayers())*100) >= 75) {
+                int percent = ((server.getCurrentPlayers()/server.getServerInfo().getMaxPlayers())*100);
+                if (percent >= 75) {
                     full += 1;
                 }
             }
@@ -152,14 +157,10 @@ public class Server {
                 process.waitFor();
             }
 
-            process = runtime.exec(new String[]{"echo", "server-port="+port, ">>", "./runningServers/"+port+"/server.properties"});
-            process.waitFor();
-
-            process = runtime.exec(new String[]{"echo", "server-ip="+serverController.getMainConfig().privateIP, ">>", "./runningServers/"+port+"/server.properties"});
-            process.waitFor();
-
-            process = runtime.exec(new String[]{"echo", "max-players="+serverInfo.getMaxPlayers(), ">>", "./runningServers/"+port+"/server.properties"});
-            process.waitFor();
+            PrintWriter writer = new PrintWriter(new FileOutputStream(new File("./runningServers/"+port+"/server.properties"), true));
+            writer.println("server-port="+port);
+            writer.println("server-ip="+serverController.getMainConfig().privateIP);
+            writer.println("max-players=" + serverInfo.getMaxPlayers());
 
             World mainWorld = null;
             for (World world : serverInfo.getWorlds()) {
@@ -170,12 +171,14 @@ public class Server {
             }
 
             if (mainWorld == null) {
-                logger.error("Could not find main world for server "+serverInfo.getServerName());
+                logger.error("Could not find main world for server " + serverInfo.getServerName());
                 return false;
             }
 
-            process = runtime.exec(new String[]{"echo", "level-name="+mainWorld.getWorldName(), ">>", "./runningServers/"+port+"/server.properties"});
-            process.waitFor();
+            writer.println("level-name=" + mainWorld.getWorldName());
+            writer.flush();
+            writer.close();
+
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
             return false;
@@ -192,7 +195,7 @@ public class Server {
         logger.info("Running Server Process for " + port);
         try {
             builder.start();
-            Server.getServers().put(serverController.getMainConfig().privateIP+"."+port, this);
+            Server.getServers().put(serverUUID, this);
         } catch (IOException e) {
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());

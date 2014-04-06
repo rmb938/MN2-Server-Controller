@@ -1,7 +1,6 @@
 package com.rmb938.controller.jedis;
 
 import com.rmb938.controller.MN2ServerController;
-import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.RemoteServer;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
@@ -39,20 +38,16 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                     int currentPlayers = (Integer) objectHashMap.get("currentPlayers");
                     Server server;
                     if (toServerController.equalsIgnoreCase(serverController.getMainConfig().privateIP)) {
-                        server = Server.getServers().get(toServerController + "." + fromServer);
+                        server = Server.getServers().get(serverUUID);
                         if (server == null) {
                             server = new Server(serverController, ServerInfo.getServerInfos().get(serverName), serverUUID, fromServer);
-                            Server.getServers().put(toServerController + "." + fromServer, server);
+                            Server.getServers().put(serverUUID, server);
                         }
                     } else {
-                        server = Server.getServers().get(toServerController + "." + fromServer);
+                        server = Server.getServers().get(serverUUID);
                         if (server == null) {
-                            RemoteController remoteController = RemoteController.getRemoteControllers().get(toServerController);
-                            if (remoteController == null) {
-                                break;
-                            }
-                            server = new RemoteServer(serverController, remoteController, fromServer, serverName, serverUUID);
-                            Server.getServers().put(toServerController + "." + fromServer, server);
+                            server = new RemoteServer(serverController, fromServer, serverName, serverUUID);
+                            Server.getServers().put(serverUUID, server);
                         }
                     }
                     if (server.getLastHeartbeat() == -2) {
@@ -69,7 +64,11 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                     }
                     break;
                 case "removeServer":
-                    Server.getServers().remove(toServerController + "." + fromServer);
+                    serverUUID = (String) objectHashMap.get("serverUUID");
+                    server = Server.getServers().get(serverUUID);
+                    if (server != null) {
+                        server.setLastHeartbeat(1);
+                    }
                     break;
                 default:
                     logger.info("Unknown STCS Command MN2ServerController " + command);

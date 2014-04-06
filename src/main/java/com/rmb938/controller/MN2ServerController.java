@@ -148,6 +148,12 @@ public class MN2ServerController {
         logger.info("Connecting to Redis");
         JedisManager.connectToRedis(mainConfig.redis_address);
         JedisManager.setUpDelegates();
+        try {
+            JedisManager.returnJedis(JedisManager.getJedis());
+        } catch (Exception ex) {
+            logger.error("Unable to connect to redis. Shutting down");
+            return;
+        }
         new NetCommandHandlerSCTSC(this);
         new NetCommandHandlerSTSC(this);
         new NetCommandHandlerBTSC(this);
