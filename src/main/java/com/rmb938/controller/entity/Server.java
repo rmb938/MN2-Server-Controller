@@ -37,6 +37,9 @@ public class Server {
         ArrayList<Server> servers1 = new ArrayList<>();
         for (Server server : servers.values()) {
             if (server.getServerInfo() == serverInfo) {
+                if (server instanceof ClosingServer) {
+                    continue;
+                }
                 servers1.add(server);
             }
         }
@@ -49,12 +52,15 @@ public class Server {
             int full = 0;
             ArrayList<Server> servers = getServers(serverInfo);
             for (Server server : servers) {
+                if (server instanceof ClosingServer) {
+                    continue;
+                }
                 int percent = ((server.getCurrentPlayers()/server.getServerInfo().getMaxPlayers())*100);
                 if (percent >= 75) {
                     full += 1;
                 }
             }
-            if (full >= servers.size()) {
+            if (full >= serverInfo.getMinServers()) {
                 infos.add(serverInfo);
             }
         }
@@ -65,6 +71,20 @@ public class Server {
         ArrayList<Server> localServers = new ArrayList<>();
         for (Server server : servers.values()) {
             if (server instanceof RemoteServer) {
+                continue;
+            }
+            localServers.add(server);
+        }
+        return localServers;
+    }
+
+    public static ArrayList<Server> getLocalServersNonClose() {
+        ArrayList<Server> localServers = new ArrayList<>();
+        for (Server server : servers.values()) {
+            if (server instanceof RemoteServer) {
+                continue;
+            }
+            if (server instanceof ClosingServer) {
                 continue;
             }
             localServers.add(server);
@@ -187,6 +207,9 @@ public class Server {
         Jedis jedis = JedisManager.getJedis();
         jedis.set(serverController.getMainConfig().privateIP+"."+port, serverInfo.getServerName());
         jedis.set(serverController.getMainConfig().privateIP+"."+port+".uuid", serverUUID);
+
+        logger.info("Set Name: "+jedis.get(serverController.getMainConfig().privateIP+"."+port)+" UUID: "+jedis.get(serverController.getMainConfig().privateIP+"."+port+".uuid"));
+
         JedisManager.returnJedis(jedis);
 
         ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh");

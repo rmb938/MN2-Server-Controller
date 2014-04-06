@@ -1,6 +1,7 @@
 package com.rmb938.controller.jedis;
 
 import com.rmb938.controller.MN2ServerController;
+import com.rmb938.controller.entity.ClosingServer;
 import com.rmb938.controller.entity.RemoteServer;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
@@ -66,8 +67,15 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                 case "removeServer":
                     serverUUID = (String) objectHashMap.get("serverUUID");
                     server = Server.getServers().get(serverUUID);
+                    logger.info("Removing server " + server.getPort());
                     if (server != null) {
-                        server.setLastHeartbeat(1);
+                        if (server instanceof RemoteServer) {
+                            Server.getServers().remove(serverUUID);
+                        } else {
+                            ClosingServer closingServer = new ClosingServer(serverController, server.getServerInfo(), serverUUID, server.getPort());
+                            closingServer.setLastHeartbeat(System.currentTimeMillis());
+                            Server.getServers().put(serverUUID, closingServer);
+                        }
                     }
                     break;
                 default:

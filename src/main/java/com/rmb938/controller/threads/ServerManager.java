@@ -1,6 +1,7 @@
 package com.rmb938.controller.threads;
 
 import com.rmb938.controller.MN2ServerController;
+import com.rmb938.controller.entity.ClosingServer;
 import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
@@ -37,18 +38,20 @@ public class ServerManager implements Runnable {
                 }
 
                 //Remove timed out servers
-                ArrayList<String> toRemove = new ArrayList<>();
+                ArrayList<Server> toRemove = new ArrayList<>();
                 for (String serverUUID : Server.getServers().keySet()) {
                     Server server = Server.getServers().get(serverUUID);
                     if (server.getLastHeartbeat() + 60000 < System.currentTimeMillis() && server.getLastHeartbeat() > 0) {
-                        toRemove.add(serverUUID);
+                        toRemove.add(server);
                     }
                 }
-                for (String serverUUID : toRemove) {
-                    NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
-                    netCommandHandlerSCTB.addArg("serverUUID", serverUUID);
-                    netCommandHandlerSCTB.flush();
-                    Server.getServers().remove(serverUUID);
+                for (Server server : toRemove) {
+                    if (server instanceof ClosingServer == false) {
+                        NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
+                        netCommandHandlerSCTB.addArg("serverUUID", server.getServerUUID());
+                        netCommandHandlerSCTB.flush();
+                    }
+                    Server.getServers().remove(server.getServerUUID());
                 }
 
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
@@ -68,7 +71,7 @@ public class ServerManager implements Runnable {
                     }
                     int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
                     if (size > 0) {
-                        int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServers().size();
+                        int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServersNonClose().size();
                         if (canMake > 0) {
                             int needMake = canMake >= size ? size : size - canMake;
                             logger.info("Making " + needMake + " " + serverInfo.getServerName());
@@ -101,15 +104,15 @@ public class ServerManager implements Runnable {
                     if (RemoteController.getMainController().getControllerID().compareTo(serverController.getControllerId()) == 0) {
                         //Start up more servers if less then min needed
                         for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+                            int size = Server.getServers(serverInfo).size();
+                            logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (jedis.exists(serverInfo.getServerName())) {
-                                int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                                if (size != 0) {
-                                    logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
+                                int jedisSize = Integer.parseInt(jedis.get(serverInfo.getServerName()));
+                                if (jedisSize != 0) {
+                                    logger.warn("Waiting to create " + jedisSize + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
                                 }
                                 continue;
                             }
-                            int size = Server.getServers(serverInfo).size();
-                            logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (serverInfo.getMinServers() > size) {
                                 int need = serverInfo.getMinServers() - size;
 
