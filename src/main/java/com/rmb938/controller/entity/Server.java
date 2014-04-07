@@ -212,7 +212,7 @@ public class Server {
 
         JedisManager.returnJedis(jedis);
 
-        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh");
+        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh", serverInfo.getMemory()+"");
         builder.directory(new File("./runningServers/"+port));//sets working directory
 
         logger.info("Running Server Process for " + port);

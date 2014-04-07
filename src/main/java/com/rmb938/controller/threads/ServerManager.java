@@ -71,7 +71,7 @@ public class ServerManager implements Runnable {
                     }
                     int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
                     if (size > 0) {
-                        int canMake = serverController.getMainConfig().serverAmount - Server.getLocalServersNonClose().size();
+                        int canMake = serverController.getMainConfig().controller_serverAmount - Server.getLocalServersNonClose().size();
                         if (canMake > 0) {
                             int needMake = canMake >= size ? size : size - canMake;
                             logger.info("Making " + needMake + " " + serverInfo.getServerName());
@@ -134,43 +134,45 @@ public class ServerManager implements Runnable {
                         }
 
                         //Add more servers if needed
-                        for (ServerInfo serverInfo : Server.get75Full()) {
-                            logger.info("Checking Load Balance " + serverInfo.getServerName());
-                            if (jedis.exists(serverInfo.getServerName())) {
-                                int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                                if (size != 0) {
-                                    logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
-                                }
-                                continue;
-                            }
-                            logger.info("Load Balance more " + serverInfo.getServerName());
-                            if (jedis.setnx("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + "") == 0) {
-                                long time = Long.parseLong(jedis.get("lock." + serverInfo.getServerName()));
-                                if (System.currentTimeMillis() > time) {
-                                    time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
-                                    if (System.currentTimeMillis() < time) {
-                                        continue;
+                        if (serverController.getMainConfig().controller_loadBalance) {
+                            for (ServerInfo serverInfo : Server.get75Full()) {
+                                logger.info("Checking Load Balance " + serverInfo.getServerName());
+                                if (jedis.exists(serverInfo.getServerName())) {
+                                    int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
+                                    if (size != 0) {
+                                        logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
                                     }
-                                } else {
                                     continue;
                                 }
+                                logger.info("Load Balance more " + serverInfo.getServerName());
+                                if (jedis.setnx("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + "") == 0) {
+                                    long time = Long.parseLong(jedis.get("lock." + serverInfo.getServerName()));
+                                    if (System.currentTimeMillis() > time) {
+                                        time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                                        if (System.currentTimeMillis() < time) {
+                                            continue;
+                                        }
+                                    } else {
+                                        continue;
+                                    }
+                                }
+                                jedis.set(serverInfo.getServerName(), "3");
+                                jedis.del("lock." + serverInfo.getServerName());
                             }
-                            jedis.set(serverInfo.getServerName(), "3");
-                            jedis.del("lock." + serverInfo.getServerName());
-                        }
 
-                        //Remove Empty Servers
-                        for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                            ArrayList<Server> servers = Server.getServers(serverInfo);
-                            if (servers.size() <= serverInfo.getMinServers()) {
-                                continue;
-                            }
-                            for (Server server : servers) {
-                                if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
-                                    logger.info("Load Balance remove " + serverInfo.getServerName());
-                                    NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, server.getServerUUID());
-                                    netCommandSCTS.flush();
-                                    server.setLastHeartbeat(-2);
+                            //Remove Empty Servers
+                            for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+                                ArrayList<Server> servers = Server.getServers(serverInfo);
+                                if (servers.size() <= serverInfo.getMinServers()) {
+                                    continue;
+                                }
+                                for (Server server : servers) {
+                                    if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
+                                        logger.info("Load Balance remove " + serverInfo.getServerName());
+                                        NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, server.getServerUUID());
+                                        netCommandSCTS.flush();
+                                        server.setLastHeartbeat(-2);
+                                    }
                                 }
                             }
                         }

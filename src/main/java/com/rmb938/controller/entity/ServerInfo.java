@@ -17,11 +17,17 @@ public class ServerInfo {
     private final String serverName;
     private final int maxPlayers;
     private final int minServers;
+    private final int memory;
 
-    public ServerInfo(String serverName, int maxPlayers, int minServers) {
+    public ServerInfo(String serverName, int maxPlayers, int minServers, int memory) {
         this.serverName = serverName;
         this.maxPlayers = maxPlayers;
         this.minServers = minServers;
+        this.memory = memory;
+    }
+
+    public int getMemory() {
+        return memory;
     }
 
     public int getMinServers() {

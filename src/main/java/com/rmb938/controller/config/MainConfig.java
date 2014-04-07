@@ -14,7 +14,9 @@ public class MainConfig extends Config {
     }
 
     @Comment("The maximum amount of servers that this controller can handle")
-    public int serverAmount = 10;
+    public int controller_serverAmount = 10;
+    @Comment("If the server controller should make more servers based on network load")
+    public boolean controller_loadBalance = true;
 
     @Comment("The public IP address of the controller")
     public String publicIP = "127.0.0.1";

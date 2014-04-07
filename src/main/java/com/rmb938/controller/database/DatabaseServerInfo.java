@@ -30,6 +30,7 @@ public class DatabaseServerInfo {
                     "`serverName` varchar(64) NOT NULL," +
                     "`maxPlayers` int(11) NOT NULL," +
                     "`minServers` int(11) NOT NULL," +
+                    "`memory` int(11) NOT NULL," +
                     "PRIMARY KEY (`serverName`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
@@ -62,13 +63,14 @@ public class DatabaseServerInfo {
     }
 
     public void loadServerInfo() {
-        ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select serverName, maxPlayers, minServers from `mn2_server_info`", new MapListHandler());
+        ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select serverName, maxPlayers, minServers, memory from `mn2_server_info`", new MapListHandler());
         for (Object obj : beans) {
             Map map = (Map) obj;
             String serverName = (String) map.get("serverName");
             int maxPlayers = (Integer) map.get("maxPlayers");
             int minServers = (Integer) map.get("minServers");
-            ServerInfo serverInfo = new ServerInfo(serverName, maxPlayers, minServers);
+            int memory = (Integer) map.get("memory");
+            ServerInfo serverInfo = new ServerInfo(serverName, maxPlayers, minServers, memory);
             ArrayList<Object> beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select pluginName from `mn2_server_info_plugins` where serverName='"+serverName+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
