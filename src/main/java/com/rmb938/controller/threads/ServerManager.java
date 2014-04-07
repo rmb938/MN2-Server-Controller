@@ -181,6 +181,12 @@ public class ServerManager implements Runnable {
             } catch (Exception e) {
                 if (e instanceof JedisConnectionException) {
                     logger.error("Unable to contact Redis in server manager loop.");
+                    serverController.getBungee().setLastHeartBeat(System.currentTimeMillis());
+                    for (Server server : Server.getServers().values()) {
+                        if (server.getLastHeartbeat() > 0) {
+                            server.setLastHeartbeat(System.currentTimeMillis());
+                        }
+                    }
                 } else {
                     logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
                 }
