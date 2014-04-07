@@ -48,7 +48,6 @@ public class DatabaseServerInfo {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_bungee_plugins` (" +
                     "`pluginId` int(11) NOT NULL," +
                     "UNIQUE KEY `pluginId` (`pluginId`)," +
-                    "FOREIGN KEY (`pluginId`) REFERENCES `mn2_server_plugins` (`pluginId`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info_worlds") == false) {

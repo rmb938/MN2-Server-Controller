@@ -41,6 +41,7 @@ public class MN2ServerController {
         mainConfig = new MainConfig();
         try {
             mainConfig.init();
+            mainConfig.save();
         } catch (InvalidConfigurationException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return;
