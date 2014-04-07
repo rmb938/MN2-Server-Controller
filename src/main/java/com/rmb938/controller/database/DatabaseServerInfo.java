@@ -27,21 +27,20 @@ public class DatabaseServerInfo {
     private void createTable() {
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info") == false) {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info` (" +
-                    "`serverId` int(11) NOT NULL AUTO_INCREMENT," +
                     "`serverName` varchar(64) NOT NULL," +
                     "`maxPlayers` int(11) NOT NULL," +
                     "`minServers` int(11) NOT NULL," +
-                    "PRIMARY KEY (`serverId`)" +
-                    ") ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;");
+                    "PRIMARY KEY (`serverName`)" +
+                    ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info_plugins") == false) {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info_plugins` (" +
-                    "`serverId` int(11) NOT NULL," +
+                    "`serverName` varchar(64) NOT NULL," +
                     "`pluginName` varchar(64) NOT NULL," +
-                    "UNIQUE KEY `serverId_2` (`serverId`,`pluginName`)," +
-                    "KEY `serverId` (`serverId`)," +
+                    "UNIQUE KEY `serverName_2` (`serverName`,`pluginName`)," +
+                    "KEY `serverName` (`serverName`)," +
                     "KEY `pluginName` (`pluginName`)," +
-                    "FOREIGN KEY (`serverId`) REFERENCES `mn2_server_info` (`serverId`)" +
+                    "FOREIGN KEY (`serverName`) REFERENCES `mn2_server_info` (`serverName`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_bungee_plugins") == false) {
@@ -52,36 +51,35 @@ public class DatabaseServerInfo {
         }
         if (DatabaseAPI.getMySQLDatabase().isTable("mn2_server_info_worlds") == false) {
             DatabaseAPI.getMySQLDatabase().createTable("CREATE TABLE IF NOT EXISTS `mn2_server_info_worlds` (" +
-                    "`serverId` int(11) NOT NULL," +
+                    "`serverName` varchar(64) NOT NULL," +
                     "`worldName` varchar(64) NOT NULL," +
-                    "UNIQUE KEY `serverId_2` (`serverId`,`worldName`)," +
-                    "KEY `serverId` (`serverId`)," +
+                    "UNIQUE KEY `serverName_2` (`serverName`,`worldName`)," +
+                    "KEY `serverName` (`serverName`)," +
                     "KEY `worldName` (`worldName`)," +
-                    "FOREIGN KEY (`serverId`) REFERENCES `mn2_server_info` (`serverId`)" +
+                    "FOREIGN KEY (`serverName`) REFERENCES `mn2_server_info` (`serverName`)" +
                     ") ENGINE=InnoDB DEFAULT CHARSET=latin1;");
         }
     }
 
     public void loadServerInfo() {
-        ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select serverId, serverName, maxPlayers, minServers from `mn2_server_info`", new MapListHandler());
+        ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select serverName, maxPlayers, minServers from `mn2_server_info`", new MapListHandler());
         for (Object obj : beans) {
             Map map = (Map) obj;
-            int serverId = (Integer) map.get("serverId");
             String serverName = (String) map.get("serverName");
             int maxPlayers = (Integer) map.get("maxPlayers");
             int minServers = (Integer) map.get("minServers");
             ServerInfo serverInfo = new ServerInfo(serverName, maxPlayers, minServers);
-            ArrayList<Object> beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select pluginName from `mn2_server_info_plugins` where serverId='"+serverId+"'", new MapListHandler());
+            ArrayList<Object> beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select pluginName from `mn2_server_info_plugins` where serverName='"+serverName+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
                 String pluginName = (String) map1.get("pluginName");
                 Plugin plugin = Plugin.getPlugins().get(pluginName);
                 if (plugin == null) {
-                    logger.warn("Could not load plugin "+pluginName+" into bungee plugin is null.");
+                    logger.warn("Could not load plugin "+pluginName+" into server plugin is null.");
                 }
                 serverInfo.getPlugins().add(plugin);
             }
-            beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldName from `mn2_server_info_worlds` where serverId='"+serverId+"'", new MapListHandler());
+            beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldName from `mn2_server_info_worlds` where serverName='"+serverName+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
                 String worldName = (String) map1.get("worldName");
