@@ -78,6 +78,7 @@ public class DatabaseServerInfo {
                 Plugin plugin = Plugin.getPlugins().get(pluginName);
                 if (plugin == null) {
                     logger.warn("Could not load plugin "+pluginName+" into server plugin is null.");
+                    continue;
                 }
                 serverInfo.getPlugins().add(plugin);
             }
@@ -106,6 +107,7 @@ public class DatabaseServerInfo {
             Plugin plugin = Plugin.getPlugins().get(pluginName);
             if (plugin == null) {
                 logger.warn("Could not load plugin "+pluginName+" into bungee plugin is null.");
+                continue;
             }
             bungee.getPlugins().add(plugin);
         }
