@@ -28,17 +28,21 @@ public class MN2ServerController {
 
     public static void main(String[] args) {
         logger.info("Starting Server Controller");
-        new MN2ServerController();
+        new MN2ServerController(args);
     }
 
     private final UUID controllerId;
     private final MainConfig mainConfig;
     private Bungee bungee;
 
-    public MN2ServerController() {
+    public MN2ServerController(String[] args) {
         this.controllerId = UUID.randomUUID();
 
-        mainConfig = new MainConfig();
+        if (args.length == 1) {
+            mainConfig = new MainConfig(args[0]);
+        } else {
+            mainConfig = new MainConfig("config.yml");
+        }
         try {
             mainConfig.init();
             mainConfig.save();
@@ -124,6 +128,10 @@ public class MN2ServerController {
             World world = new World(worldFolder.getName(), worldConfig);
             logger.info("Loaded World "+world.getWorldName());
             World.getWorlds().put(world.getWorldName(), world);
+        }
+        if (World.getWorlds().size() == 0) {
+            logger.error("No worlds were loaded. FIX THIS!");
+            return;
         }
 
         logger.info("Loading Plugins");

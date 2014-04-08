@@ -8,9 +8,9 @@ import java.io.File;
 
 public class MainConfig extends Config {
 
-    public MainConfig() {
+    public MainConfig(String fileLocation) {
         CONFIG_HEADER = new String[]{"MN2 Server Controller Configuration File"};
-        CONFIG_FILE = new File("config.yml");
+        CONFIG_FILE = new File(fileLocation);
     }
 
     @Comment("The maximum amount of servers that this controller can handle")

@@ -219,6 +219,7 @@ public class Server {
         try {
             builder.start();
             Server.getServers().put(serverUUID, this);
+            lastHeartbeat = System.currentTimeMillis()+60000;
         } catch (IOException e) {
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());

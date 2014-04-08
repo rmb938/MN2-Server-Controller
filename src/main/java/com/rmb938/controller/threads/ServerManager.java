@@ -1,7 +1,6 @@
 package com.rmb938.controller.threads;
 
 import com.rmb938.controller.MN2ServerController;
-import com.rmb938.controller.entity.ClosingServer;
 import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
@@ -47,37 +46,35 @@ public class ServerManager implements Runnable {
                     }
                 }
                 for (Server server : toRemove) {
-                    if (server instanceof ClosingServer == false) {
-                        NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
-                        netCommandHandlerSCTB.addArg("serverUUID", server.getServerUUID());
-                        netCommandHandlerSCTB.flush();
-                        while (jedis.setnx("lock." + server.getServerInfo().getServerName()+".key", System.currentTimeMillis() + 30000 + "") == 0) {
-                            String lock = jedis.get("lock." + server.getServerInfo().getServerName()+".key");
-                            long time = Long.parseLong(lock != null ? lock : "0");
-                            if (System.currentTimeMillis() > time) {
-                                time = Long.parseLong(jedis.getSet("lock." + server.getServerInfo().getServerName()+".key", System.currentTimeMillis() + 30000 + ""));
-                                if (System.currentTimeMillis() < time) {
-                                    continue;
-                                }
-                            } else {
+                    NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
+                    netCommandHandlerSCTB.addArg("serverUUID", server.getServerUUID());
+                    netCommandHandlerSCTB.flush();
+                    while (jedis.setnx("lock." + server.getServerInfo().getServerName() + ".key", System.currentTimeMillis() + 30000 + "") == 0) {
+                        String lock = jedis.get("lock." + server.getServerInfo().getServerName() + ".key");
+                        long time = Long.parseLong(lock != null ? lock : "0");
+                        if (System.currentTimeMillis() > time) {
+                            time = Long.parseLong(jedis.getSet("lock." + server.getServerInfo().getServerName() + ".key", System.currentTimeMillis() + 30000 + ""));
+                            if (System.currentTimeMillis() < time) {
                                 continue;
                             }
+                        } else {
+                            continue;
+                        }
+                        break;
+                    }
+                    Set<String> keys = jedis.keys("server." + server.getServerInfo().getServerName() + ".*");
+                    String keyToDel = null;
+                    for (String key : keys) {
+                        String uuid = jedis.get(key);
+                        if (uuid.equals(server.getServerUUID())) {
+                            keyToDel = key;
                             break;
                         }
-                        Set<String> keys = jedis.keys("server." + server.getServerInfo().getServerName() + ".*");
-                        String keyToDel = null;
-                        for (String key : keys) {
-                            String uuid = jedis.get(key);
-                            if (uuid.equals(server.getServerUUID())) {
-                                keyToDel = key;
-                                break;
-                            }
-                        }
-                        if (keyToDel != null) {
-                            jedis.del(keyToDel);
-                        }
-                        jedis.del("lock." + server.getServerInfo().getServerName()+".key");
                     }
+                    if (keyToDel != null) {
+                        jedis.del(keyToDel);
+                    }
+                    jedis.del("lock." + server.getServerInfo().getServerName() + ".key");
                     Server.getServers().remove(server.getServerUUID());
                 }
 
