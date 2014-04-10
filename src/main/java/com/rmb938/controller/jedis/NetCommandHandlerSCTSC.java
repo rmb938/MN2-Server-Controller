@@ -52,7 +52,7 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
 
                     break;
                 default:
-                    logger.info("Unknown SCTCS Command MN2ServerController " + command);
+                    break;
             }
         } catch (JSONException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());

@@ -51,9 +51,6 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                             Server.getServers().put(serverUUID, server);
                         }
                     }
-                    if (server.getLastHeartbeat() == -2) {
-                        break;
-                    }
 
                     server.setCurrentPlayers(currentPlayers);
                     server.setLastHeartbeat(System.currentTimeMillis());
@@ -79,7 +76,7 @@ public class NetCommandHandlerSTSC extends NetCommandHandler {
                     }
                     break;
                 default:
-                    logger.info("Unknown STCS Command MN2ServerController " + command);
+                    break;
             }
         } catch (JSONException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());

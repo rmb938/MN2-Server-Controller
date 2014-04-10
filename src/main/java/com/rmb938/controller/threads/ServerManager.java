@@ -13,7 +13,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.UUID;
 
 public class ServerManager implements Runnable {
@@ -27,7 +26,7 @@ public class ServerManager implements Runnable {
     }
 
     public void run() {
-        while (true) {
+        while (Thread.interrupted() == false) {
             Jedis jedis = null;
             try {
                 jedis = JedisManager.getJedis();//connect first to make sure redis is alive. If not ignore
@@ -49,36 +48,14 @@ public class ServerManager implements Runnable {
                     NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
                     netCommandHandlerSCTB.addArg("serverUUID", server.getServerUUID());
                     netCommandHandlerSCTB.flush();
-                    while (jedis.setnx("lock." + server.getServerInfo().getServerName() + ".key", System.currentTimeMillis() + 30000 + "") == 0) {
-                        String lock = jedis.get("lock." + server.getServerInfo().getServerName() + ".key");
-                        long time = Long.parseLong(lock != null ? lock : "0");
-                        if (System.currentTimeMillis() > time) {
-                            time = Long.parseLong(jedis.getSet("lock." + server.getServerInfo().getServerName() + ".key", System.currentTimeMillis() + 30000 + ""));
-                            if (System.currentTimeMillis() < time) {
-                                continue;
-                            }
-                        } else {
-                            continue;
-                        }
-                        break;
-                    }
-                    Set<String> keys = jedis.keys("server." + server.getServerInfo().getServerName() + ".*");
-                    String keyToDel = null;
-                    for (String key : keys) {
-                        String uuid = jedis.get(key);
-                        if (uuid.equals(server.getServerUUID())) {
-                            keyToDel = key;
-                            break;
-                        }
-                    }
-                    if (keyToDel != null) {
-                        jedis.del(keyToDel);
-                    }
-                    jedis.del("lock." + server.getServerInfo().getServerName() + ".key");
                     Server.getServers().remove(server.getServerUUID());
                 }
 
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+                    int canMake = serverController.getMainConfig().controller_serverAmount - Server.getLocalServersNonClose().size();
+                    if (canMake == 0) {
+                        continue;
+                    }
                     if (jedis.exists(serverInfo.getServerName()) == false) {
                         continue;
                     }
@@ -86,7 +63,11 @@ public class ServerManager implements Runnable {
                         String lock = jedis.get("lock." + serverInfo.getServerName());
                         long time = Long.parseLong(lock != null ? lock : "0");
                         if (System.currentTimeMillis() > time) {
-                            time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                            try {
+                                time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                            } catch (Exception ex) {
+                                time = 0;
+                            }
                             if (System.currentTimeMillis() < time) {
                                 continue;
                             }
@@ -96,8 +77,6 @@ public class ServerManager implements Runnable {
                     }
                     int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
                     if (size > 0) {
-                        int canMake = serverController.getMainConfig().controller_serverAmount - Server.getLocalServersNonClose().size();
-                        if (canMake > 0) {
                             int needMake = canMake >= size ? size : size - canMake;
                             logger.info("Making " + needMake + " " + serverInfo.getServerName());
                             int failedMake = 0;
@@ -120,7 +99,6 @@ public class ServerManager implements Runnable {
                             } else {
                                 jedis.set(serverInfo.getServerName(), size + "");
                             }
-                        }
                     }
                     jedis.del("lock." + serverInfo.getServerName());
                 }
@@ -129,7 +107,7 @@ public class ServerManager implements Runnable {
                     if (RemoteController.getMainController().getControllerID().compareTo(serverController.getControllerId()) == 0) {
                         //Start up more servers if less then min needed
                         for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                            int size = Server.getServers(serverInfo).size();
+                            int size = jedis.keys("server."+serverInfo.getServerName()+".*").size();
                             logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (jedis.exists(serverInfo.getServerName())) {
                                 int jedisSize = Integer.parseInt(jedis.get(serverInfo.getServerName()));
@@ -145,7 +123,11 @@ public class ServerManager implements Runnable {
                                     String lock = jedis.get("lock." + serverInfo.getServerName());
                                     long time = Long.parseLong(lock != null ? lock : "0");
                                     if (System.currentTimeMillis() > time) {
-                                        time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                                        try {
+                                            time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                                        } catch (Exception ex) {
+                                            time = 0;
+                                        }
                                         if (System.currentTimeMillis() < time) {
                                             continue;
                                         }
@@ -175,7 +157,11 @@ public class ServerManager implements Runnable {
                                     String lock = jedis.get("lock." + serverInfo.getServerName());
                                     long time = Long.parseLong(lock != null ? lock : "0");
                                     if (System.currentTimeMillis() > time) {
-                                        time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                                        try {
+                                            time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + ""));
+                                        } catch (Exception ex) {
+                                            time = 0;
+                                        }
                                         if (System.currentTimeMillis() < time) {
                                             continue;
                                         }
@@ -198,7 +184,6 @@ public class ServerManager implements Runnable {
                                         logger.info("Load Balance remove " + serverInfo.getServerName());
                                         NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, server.getServerUUID());
                                         netCommandSCTS.flush();
-                                        server.setLastHeartbeat(-2);
                                     }
                                 }
                             }
@@ -225,14 +210,9 @@ public class ServerManager implements Runnable {
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
-                logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
+                break;
             }
         }
-    }
-
-    public void startServerManager() {
-        Thread serverManager = new Thread(this);
-        serverManager.start();
     }
 
 }

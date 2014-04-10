@@ -6,11 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import redis.clients.jedis.Jedis;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Server {
@@ -205,22 +203,72 @@ public class Server {
         }
 
         Jedis jedis = JedisManager.getJedis();
+
+        while (jedis.setnx("lock." + serverInfo.getServerName()+".key", System.currentTimeMillis() + 30000 + "") == 0) {
+            String lock = jedis.get("lock." + serverInfo.getServerName()+".key");
+            long time = Long.parseLong(lock != null ? lock : "0");
+            if (System.currentTimeMillis() > time) {
+                try {
+                    time = Long.parseLong(jedis.getSet("lock." + serverInfo.getServerName() + ".key", System.currentTimeMillis() + 30000 + ""));
+                } catch (Exception ex) {
+                    time = 0;
+                }
+                if (System.currentTimeMillis() < time) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+            break;
+        }
+
+        Set<String> keys = jedis.keys("server." + serverInfo.getServerName() + ".*");
+        ArrayList<Integer> ids = new ArrayList<>();
+        int startId = 1;
+        for (String keyName : keys) {
+            int id = Integer.parseInt(keyName.split("\\.")[2]);
+            ids.add(id);
+        }
+
+        while (ids.contains(startId)) {
+            startId += 1;
+        }
+
+        int serverNumber = startId;
+
+        jedis.set("server."+serverInfo.getServerName()+"."+serverNumber, serverUUID);
+        jedis.del("lock." + serverInfo.getServerName()+".key");
+        JedisManager.returnJedis(jedis);
+
+        try {
+            PrintWriter writer = new PrintWriter(new FileOutputStream(new File("./runningServers/"+port+"/server.properties"), true));
+            writer.println("server-name="+serverInfo.getServerName()+"."+serverNumber);
+            writer.flush();
+            writer.close();
+        } catch (FileNotFoundException e) {
+            jedis.del("server."+serverInfo.getServerName()+"."+serverNumber);
+            e.printStackTrace();
+            return false;
+        }
+
         jedis.set(serverController.getMainConfig().privateIP+"."+port, serverInfo.getServerName());
         jedis.set(serverController.getMainConfig().privateIP+"."+port+".uuid", serverUUID);
 
-        logger.info("Set Name: "+jedis.get(serverController.getMainConfig().privateIP+"."+port)+" UUID: "+jedis.get(serverController.getMainConfig().privateIP+"."+port+".uuid"));
+        logger.info("Set Name: "+jedis.get(serverController.getMainConfig().privateIP+"."+port)+" Number: "+serverNumber+" UUID: "+jedis.get(serverController.getMainConfig().privateIP+"."+port+".uuid"));
 
-        JedisManager.returnJedis(jedis);
 
         ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh", serverInfo.getMemory()+"");
         builder.directory(new File("./runningServers/"+port));//sets working directory
 
         logger.info("Running Server Process for " + port);
         try {
+            lastHeartbeat = System.currentTimeMillis()+60000;
             builder.start();
             Server.getServers().put(serverUUID, this);
-            lastHeartbeat = System.currentTimeMillis()+60000;
         } catch (IOException e) {
+            jedis.del(serverController.getMainConfig().privateIP+"."+port);
+            jedis.del(serverController.getMainConfig().privateIP+"."+port+".uuid");
+            jedis.del("server."+serverInfo.getServerName()+"."+serverNumber);
             logger.error("Unable to start server "+serverInfo.getServerName()+" with port "+port);
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return false;

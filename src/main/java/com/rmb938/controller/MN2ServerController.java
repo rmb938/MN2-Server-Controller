@@ -20,6 +20,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class MN2ServerController {
@@ -28,21 +30,19 @@ public class MN2ServerController {
 
     public static void main(String[] args) {
         logger.info("Starting Server Controller");
-        new MN2ServerController(args);
+        new MN2ServerController();
     }
 
     private final UUID controllerId;
     private final MainConfig mainConfig;
+    private final ExecutorService executorService;
     private Bungee bungee;
 
-    public MN2ServerController(String[] args) {
+    public MN2ServerController() {
         this.controllerId = UUID.randomUUID();
+        executorService = Executors.newCachedThreadPool();
 
-        if (args.length == 1) {
-            mainConfig = new MainConfig(args[0]);
-        } else {
-            mainConfig = new MainConfig("config.yml");
-        }
+        mainConfig = new MainConfig("config.yml");
         try {
             mainConfig.init();
             mainConfig.save();
@@ -168,7 +168,7 @@ public class MN2ServerController {
         new NetCommandHandlerBTSC(this);
 
         logger.info("Starting Heartbeat");
-        heartbeat();
+        executorService.submit(heartbeat());
 
         logger.info("Sleeping for 20 seconds to reconnect to network");
         try {
@@ -184,7 +184,7 @@ public class MN2ServerController {
 
         logger.info("Starting Server Manager");
         ServerManager serverManager = new ServerManager(this);
-        serverManager.startServerManager();
+        executorService.submit(serverManager);
     }
 
     public Bungee getBungee() {
@@ -199,11 +199,11 @@ public class MN2ServerController {
         return controllerId;
     }
 
-    private void heartbeat() {
-        new Thread(new Runnable() {
+    private Runnable heartbeat() {
+        return new Runnable() {
             @Override
             public void run() {
-                while (true) {
+                while (Thread.interrupted() == false) {
                     logger.info("Sending beat");
                     NetCommandSCTSC netCommandSCTSC = new NetCommandSCTSC("heartbeat", mainConfig.privateIP, "*");
                     netCommandSCTSC.addArg("id", controllerId.toString());
@@ -211,11 +211,17 @@ public class MN2ServerController {
                     try {
                         Thread.sleep(5000);
                     } catch (InterruptedException e) {
-                        logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
+                        break;
                     }
                 }
             }
-        }).start();
+        };
+    }
+
+    public void stop() {
+        executorService.shutdownNow();
+        JedisManager.shutDown();
+        logger.info("Shutting Down...");
     }
 
 }

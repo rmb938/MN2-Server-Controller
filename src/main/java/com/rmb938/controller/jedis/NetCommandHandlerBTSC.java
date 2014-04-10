@@ -37,8 +37,11 @@ public class NetCommandHandlerBTSC extends NetCommandHandler {
                 case "heartbeat":
                     serverController.getBungee().setLastHeartBeat(System.currentTimeMillis());
                     break;
+                case "stop":
+                    serverController.stop();
+                    break;
                 default:
-                    logger.info("Unknown SCTCS Command MN2ServerController " + command);
+                    break;
             }
         } catch (JSONException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
