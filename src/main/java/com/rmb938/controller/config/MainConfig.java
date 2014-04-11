@@ -13,8 +13,8 @@ public class MainConfig extends Config {
         CONFIG_FILE = new File(fileLocation);
     }
 
-    @Comment("The maximum amount of servers that this controller can handle")
-    public int controller_serverAmount = 10;
+    @Comment("The total amount of ram(MB) dedicated to servers running on this node.")
+    public int controller_serverRam = 6144;
     @Comment("If the server controller should make more servers based on network load")
     public boolean controller_loadBalance = true;
 

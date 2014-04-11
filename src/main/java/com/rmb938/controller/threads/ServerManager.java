@@ -52,7 +52,15 @@ public class ServerManager implements Runnable {
                 }
 
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                    int canMake = serverController.getMainConfig().controller_serverAmount - Server.getLocalServersNonClose().size();
+                    int usedRam = 0;
+                    for (Server server : Server.getLocalServers()) {
+                        usedRam += server.getServerInfo().getMemory();
+                    }
+                    int freeRam = serverController.getMainConfig().controller_serverRam - usedRam;
+                    int canMake = 0;
+                    if (freeRam != 0) {
+                        canMake = freeRam / serverInfo.getMemory();
+                    }
                     if (canMake == 0) {
                         continue;
                     }
