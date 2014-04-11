@@ -170,6 +170,13 @@ public class MN2ServerController {
         logger.info("Starting Heartbeat");
         executorService.submit(heartbeat());
 
+        logger.warn("--------------------------------------------------");
+        logger.warn("Multi-Node Minecraft Network is under the Creative Commons");
+        logger.warn("Attribution-NonCommercial 4.0 International Public License");
+        logger.warn("If you are using this in a commercial environment you MUST");
+        logger.warn("obtain written permission.");
+        logger.warn("--------------------------------------------------");
+
         logger.info("Sleeping for 20 seconds to reconnect to network");
         try {
             Thread.sleep(20000);//sleep for 20 seconds waiting for servers and controllers to reconnect
