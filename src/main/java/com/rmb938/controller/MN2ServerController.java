@@ -51,6 +51,11 @@ public class MN2ServerController {
             return;
         }
 
+        if (mainConfig.controller_serverRam == 0) {
+            logger.error("Please set the amount of memory before running the controller.");
+            return;
+        }
+
         logger.info("Checking Plugins");
         File pluginsFolder = new File("./plugins");
         if (pluginsFolder.exists() == false) {

@@ -14,7 +14,7 @@ public class MainConfig extends Config {
     }
 
     @Comment("The total amount of ram(MB) dedicated to servers running on this node.")
-    public int controller_serverRam = 6144;
+    public int controller_serverRam = 0;
     @Comment("If the server controller should make more servers based on network load")
     public boolean controller_loadBalance = true;
 
