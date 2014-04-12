@@ -6,6 +6,7 @@ import com.rmb938.controller.config.WorldConfig;
 import com.rmb938.controller.database.DatabaseServerInfo;
 import com.rmb938.controller.entity.Bungee;
 import com.rmb938.controller.entity.Plugin;
+import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.controller.entity.World;
 import com.rmb938.controller.jedis.NetCommandHandlerBTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
@@ -157,6 +158,12 @@ public class MN2ServerController {
         logger.info("Loading Server Info");
         DatabaseServerInfo databaseServerInfo = new DatabaseServerInfo(this);
         databaseServerInfo.loadServerInfo();
+
+        if (ServerInfo.getServerInfos().size() == 0) {
+            logger.error("You must configure server info before running the controller.");
+            return;
+        }
+
         bungee = databaseServerInfo.loadBungeeInfo();
 
         logger.info("Connecting to Redis");
