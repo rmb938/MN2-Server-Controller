@@ -31,7 +31,7 @@ public class MN2ServerController {
 
     public static void main(String[] args) {
         logger.info("Starting Server Controller");
-        new MN2ServerController();
+        new MN2ServerController(args);
     }
 
     private final UUID controllerId;
@@ -39,11 +39,16 @@ public class MN2ServerController {
     private final ExecutorService executorService;
     private Bungee bungee;
 
-    public MN2ServerController() {
+    public MN2ServerController(String[] args) {
         this.controllerId = UUID.randomUUID();
         executorService = Executors.newCachedThreadPool();
 
-        mainConfig = new MainConfig("config.yml");
+        if (args.length == 1) {
+            File file = new File(args[0]);
+            mainConfig = new MainConfig(new File(file, "config.yml").getAbsolutePath());
+        } else {
+            mainConfig = new MainConfig("config.yml");
+        }
         try {
             mainConfig.init();
             mainConfig.save();

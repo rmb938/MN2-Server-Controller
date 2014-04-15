@@ -257,7 +257,7 @@ public class Server {
         logger.info("Set Name: "+jedis.get(serverController.getMainConfig().privateIP+"."+port)+" Number: "+serverNumber+" UUID: "+jedis.get(serverController.getMainConfig().privateIP+"."+port+".uuid"));
 
 
-        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+port, "./start.sh", serverInfo.getMemory()+"");
+        ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", serverInfo.getServerName()+"."+serverNumber, "./start.sh", serverInfo.getMemory()+"");
         builder.directory(new File("./runningServers/"+port));//sets working directory
 
         logger.info("Running Server Process for " + port);

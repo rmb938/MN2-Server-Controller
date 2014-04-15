@@ -1,8 +1,10 @@
 package com.rmb938.controller.entity;
 
 import com.rmb938.controller.MN2ServerController;
+import com.rmb938.jedis.JedisManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import redis.clients.jedis.Jedis;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,9 +58,6 @@ public class Bungee implements Runnable {
 
             process = runtime.exec(new String[] {"sed", "-i", "s/a.a.a.a/"+serverController.getMainConfig().publicIP+"/", "./runningServers/bungee/config.yml"});
             process.waitFor();
-
-            process = runtime.exec(new String[] {"sed", "-i", "s/b.b.b.b/"+serverController.getMainConfig().privateIP+"/", "./runningServers/bungee/config.yml"});
-            process.waitFor();
         } catch (IOException | InterruptedException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return;
@@ -66,6 +65,10 @@ public class Bungee implements Runnable {
 
         ProcessBuilder builder = new ProcessBuilder("screen", "-dmS", "bungee", "./start.sh");
         builder.directory(new File("./runningServers/bungee"));//sets working directory
+
+        Jedis jedis = JedisManager.getJedis();
+        jedis.set(serverController.getMainConfig().publicIP+":bungee", serverController.getMainConfig().privateIP);
+        JedisManager.returnJedis(jedis);
 
         logger.info("Running Bungee Process");
         try {
