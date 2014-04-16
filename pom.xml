@@ -69,6 +69,7 @@
                                     <include>com.rmb938.database:MN2Database:*</include>
                                     <include>org.yaml:snakeyaml:*</include>
                                     <include>mysql:mysql-connector-java:*</include>
+                                    <include>org.mcstats.standalone:metrics:*</include>
                                 </includes>
                             </artifactSet>
                         </configuration>
@@ -94,9 +95,19 @@
             <id>snapshots</id>
             <url>http://repo.rmb938.com/repository/snapshots/</url>
         </repository>
+        <repository>
+            <id>Plugin Metrics</id>
+            <url>http://repo.mcstats.org/content/repositories/public</url>
+        </repository>
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>org.mcstats.standalone</groupId>
+            <artifactId>metrics</artifactId>
+            <version>R6</version>
+            <scope>compile</scope>
+        </dependency>
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>

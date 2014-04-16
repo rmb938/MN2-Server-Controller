@@ -12,14 +12,17 @@ import com.rmb938.controller.jedis.NetCommandHandlerBTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSTSC;
 import com.rmb938.controller.threads.ServerManager;
+import com.rmb938.controller.utils.MN2Metrics;
 import com.rmb938.database.DatabaseAPI;
 import com.rmb938.jedis.JedisManager;
 import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTSC;
 import net.cubespace.Yamler.Config.InvalidConfigurationException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mcstats.Metrics;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,6 +58,13 @@ public class MN2ServerController {
         } catch (InvalidConfigurationException e) {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
             return;
+        }
+
+        try {
+            Metrics metrics = new MN2Metrics("MN2 Network", "1.0.0");
+            metrics.start();
+        } catch (IOException e) {
+            // Failed to submit the stats :-(
         }
 
         if (mainConfig.controller_serverRam == 0) {
