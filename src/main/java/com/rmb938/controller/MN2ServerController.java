@@ -41,6 +41,7 @@ public class MN2ServerController {
     private final MainConfig mainConfig;
     private final ExecutorService executorService;
     private Bungee bungee;
+    private Metrics metrics;
 
     public MN2ServerController(String[] args) {
         this.controllerId = UUID.randomUUID();
@@ -61,7 +62,7 @@ public class MN2ServerController {
         }
 
         try {
-            Metrics metrics = new MN2Metrics("MN2 Network", "1.0.0");
+            metrics = new MN2Metrics("MN2 Network", "1.0.0");
             metrics.start();
         } catch (IOException e) {
             // Failed to submit the stats :-(
@@ -255,6 +256,13 @@ public class MN2ServerController {
     public void stop() {
         executorService.shutdownNow();
         JedisManager.shutDown();
+        if (metrics != null) {
+            try {
+                metrics.disable();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         logger.info("Shutting Down...");
     }
 
