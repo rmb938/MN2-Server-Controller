@@ -5,7 +5,6 @@ import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.jedis.JedisManager;
-import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTB;
 import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -13,7 +12,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import java.util.ArrayList;
-import java.util.UUID;
 
 public class ServerManager implements Runnable {
 
@@ -29,33 +27,16 @@ public class ServerManager implements Runnable {
         while (Thread.interrupted() == false) {
             Jedis jedis = null;
             try {
-                jedis = JedisManager.getJedis();//connect first to make sure redis is alive. If not ignore
+                jedis = JedisManager.getJedis();
                 if (serverController.getBungee().getLastHeartBeat() + 60000 < System.currentTimeMillis() && serverController.getBungee().getLastHeartBeat() > 0) {
                     logger.info("Restarting Bungee Instance. Must of crashed.");
                     serverController.getBungee().startBungee();
                     serverController.getBungee().setLastHeartBeat(-1);
                 }
-
-                //Remove timed out servers
-                ArrayList<Server> toRemove = new ArrayList<>();
-                for (String serverUUID : Server.getServers().keySet()) {
-                    Server server = Server.getServers().get(serverUUID);
-                    if (server.getLastHeartbeat() + 60000 < System.currentTimeMillis() && server.getLastHeartbeat() > 0) {
-                        toRemove.add(server);
-                    }
-                }
-                for (Server server : toRemove) {
-                    NetCommandSCTB netCommandHandlerSCTB = new NetCommandSCTB("removeServer", serverController.getMainConfig().privateIP, serverController.getMainConfig().privateIP);
-                    netCommandHandlerSCTB.addArg("serverUUID", server.getServerUUID());
-                    netCommandHandlerSCTB.flush();
-                    Server.getServers().remove(server.getServerUUID());
-                }
-
+                logger.info("Checking Make");
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                     int usedRam = 0;
-                    for (Server server : Server.getLocalServers()) {
-                        usedRam += server.getServerInfo().getMemory();
-                    }
+                    usedRam += serverInfo.getMemory() * Server.getLocalServers(serverController).size();
                     int freeRam = serverController.getMainConfig().controller_serverRam - usedRam;
                     int canMake = 0;
                     if (freeRam != 0) {
@@ -85,28 +66,27 @@ public class ServerManager implements Runnable {
                     }
                     int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
                     if (size > 0) {
-                            int needMake = canMake >= size ? size : size - canMake;
-                            logger.info("Making " + needMake + " " + serverInfo.getServerName());
-                            int failedMake = 0;
-                            for (int i = 0; i < needMake; i++) {
-                                int port = 25566;
-                                while (Server.getLocalServer(port) != null) {
-                                    port += 1;
-                                }
-                                Server server = new Server(serverController, serverInfo, UUID.randomUUID().toString(), port);
-                                boolean success = server.startServer();
-                                if (success == false) {
-                                    logger.info("Failed to make " + serverInfo.getServerName());
-                                    failedMake += 1;
-                                }
+                        int needMake = canMake >= size ? size : size - canMake;
+                        logger.info("Making " + needMake + " " + serverInfo.getServerName());
+                        int failedMake = 0;
+                        for (int i = 0; i < needMake; i++) {
+                            int port = 25566;
+                            while (Server.getLocalServer(port, serverController) == true) {
+                                port += 1;
                             }
-                            size -= needMake;
-                            size += failedMake;
-                            if (size == 0) {
-                                jedis.setex(serverInfo.getServerName(), 30, size + "");
-                            } else {
-                                jedis.set(serverInfo.getServerName(), size + "");
+                            boolean success = Server.startServer(serverInfo, serverController, port);
+                            if (success == false) {
+                                logger.info("Failed to make " + serverInfo.getServerName());
+                                failedMake += 1;
                             }
+                        }
+                        size -= needMake;
+                        size += failedMake;
+                        if (size == 0) {
+                            jedis.setex(serverInfo.getServerName(), 30, size + "");
+                        } else {
+                            jedis.set(serverInfo.getServerName(), size + "");
+                        }
                     }
                     jedis.del("lock." + serverInfo.getServerName());
                 }
@@ -115,7 +95,7 @@ public class ServerManager implements Runnable {
                     if (RemoteController.getMainController().getControllerID().compareTo(serverController.getControllerId()) == 0) {
                         //Start up more servers if less then min needed
                         for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                            int size = jedis.keys("server."+serverInfo.getServerName()+".*").size();
+                            int size = jedis.keys("server." + serverInfo.getServerName() + ".*").size();
                             logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (jedis.exists(serverInfo.getServerName())) {
                                 int jedisSize = Integer.parseInt(jedis.get(serverInfo.getServerName()));
@@ -183,16 +163,24 @@ public class ServerManager implements Runnable {
 
                             //Remove Empty Servers
                             for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                                ArrayList<Server> servers = Server.getServers(serverInfo);
-                                if (servers.size() <= serverInfo.getMinServers()) {
+                                ArrayList<String> servers = Server.getServers(serverInfo);
+                                int size = servers.size();
+                                if (size <= serverInfo.getMinServers()) {
                                     continue;
                                 }
-                                for (Server server : servers) {
-                                    if (server.getBeatsEmpty() >= 24 && server.getLastHeartbeat() > 0) {
-                                        logger.info("Load Balance remove " + serverInfo.getServerName());
-                                        NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, server.getServerUUID());
-                                        netCommandSCTS.flush();
-                                    }
+                                ArrayList<String> localEmpty = Server.getLocalEmpty(serverController, 120);
+
+                                int maxRemove = size - serverInfo.getMinServers();
+                                int toRemove;
+                                if (localEmpty.size() > maxRemove) {
+                                    toRemove = localEmpty.size() - maxRemove;
+                                } else {
+                                    toRemove = maxRemove - localEmpty.size();
+                                }
+                                for (int i = 0; i < toRemove; i++) {
+                                    logger.info("Load Balance remove " + serverInfo.getServerName());
+                                    NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, localEmpty.get(i));
+                                    netCommandSCTS.flush();
                                 }
                             }
                         }
@@ -201,12 +189,6 @@ public class ServerManager implements Runnable {
             } catch (Exception e) {
                 if (e instanceof JedisConnectionException) {
                     logger.error("Unable to contact Redis in server manager loop.");
-                    serverController.getBungee().setLastHeartBeat(System.currentTimeMillis());
-                    for (Server server : Server.getServers().values()) {
-                        if (server.getLastHeartbeat() > 0) {
-                            server.setLastHeartbeat(System.currentTimeMillis());
-                        }
-                    }
                 } else {
                     logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
                 }

@@ -19,11 +19,7 @@ public class MN2Metrics extends Metrics {
 
     @Override
     public int getPlayersOnline() {
-        int online = 0;
-        for (Server server : Server.getServers().values()) {
-            online += server.getCurrentPlayers();
-        }
-        return online;
+        return Server.getOnlinePlayers();
     }
 
     @Override
