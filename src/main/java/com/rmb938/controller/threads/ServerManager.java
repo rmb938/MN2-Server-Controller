@@ -142,7 +142,7 @@ public class ServerManager implements Runnable {
                                     } else {
                                         logger.info("Sending Extra to "+remoteController.getIP());
                                         jsonObject.put("to", remoteController.getIP());
-                                        jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                        jedis.setex(serverInfo.getServerName(), 60, jsonObject.toString());
                                     }
                                 }
                             }
@@ -191,7 +191,7 @@ public class ServerManager implements Runnable {
                                     JSONObject jsonObject = new JSONObject();
                                     jsonObject.put("need", need);
                                     jsonObject.put("to", remoteController.getIP());
-                                    jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                    jedis.setex(serverInfo.getServerName(), 60, jsonObject.toString());
                                 }
                                 jedis.del("lock." + serverInfo.getServerName());
                             }
@@ -233,7 +233,7 @@ public class ServerManager implements Runnable {
                                     JSONObject jsonObject = new JSONObject();
                                     jsonObject.put("need", 3);
                                     jsonObject.put("to", remoteController.getIP());
-                                    jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                    jedis.setex(serverInfo.getServerName(), 60, jsonObject.toString());
                                 }
                                 jedis.del("lock." + serverInfo.getServerName());
                             }
