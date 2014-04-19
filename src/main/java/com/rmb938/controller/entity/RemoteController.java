@@ -38,13 +38,17 @@ public class RemoteController {
 
     private final String IP;
     private long lastHeartbeat = -1;
-    private final UUID controllerID;
+    private UUID controllerID;
     private final int ram;
 
     public RemoteController(String IP, UUID controllerID, int ram) {
         this.IP = IP;
         this.controllerID = controllerID;
         this.ram = ram;
+    }
+
+    public void setControllerID(UUID controllerID) {
+        this.controllerID = controllerID;
     }
 
     public int getRam() {

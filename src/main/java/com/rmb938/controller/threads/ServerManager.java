@@ -124,7 +124,7 @@ public class ServerManager implements Runnable {
                                     }
                                     RemoteController remoteController = findLowestRemote(serverInfo);
                                     if (size - made != 0) {
-                                        if (remoteController.getIP().equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
+                                        if (remoteController != null && remoteController.getIP().equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
                                             logger.info("Controller " + remoteController.getIP() + " has less load.");
                                             break;
                                         }
@@ -267,7 +267,7 @@ public class ServerManager implements Runnable {
                 if (e instanceof JedisConnectionException) {
                     logger.error("Unable to contact Redis in server manager loop.");
                 } else {
-                    logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
+                    e.printStackTrace();
                 }
             } finally {
                 if (jedis != null) {

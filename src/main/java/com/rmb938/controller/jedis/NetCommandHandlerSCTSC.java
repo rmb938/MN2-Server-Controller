@@ -49,6 +49,9 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
                         logger.info("Main Controller: "+RemoteController.getMainController().getIP());
                     } else {
                         remoteController.setLastHeartbeat(System.currentTimeMillis());
+                        if (remoteController.getControllerID() != id) {
+                            remoteController.setControllerID(id);
+                        }
                     }
 
                     break;

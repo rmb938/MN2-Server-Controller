@@ -39,6 +39,7 @@ public class MN2ServerController {
     private final ExecutorService executorService;
     private Bungee bungee;
     private Metrics metrics;
+    private DatabaseServerInfo databaseServerInfo;
 
     public MN2ServerController(String[] args) {
         this.controllerId = UUID.randomUUID();
@@ -169,7 +170,7 @@ public class MN2ServerController {
         logger.info("Connecting to MySQL");
         DatabaseAPI.initializeMySQL(mainConfig.mySQL_userName, mainConfig.mySQL_password, mainConfig.mySQL_database, mainConfig.mySQL_address, mainConfig.mySQL_port);
         logger.info("Loading Server Info");
-        DatabaseServerInfo databaseServerInfo = new DatabaseServerInfo(this);
+        databaseServerInfo = new DatabaseServerInfo(this);
         databaseServerInfo.loadServerInfo();
 
         if (ServerInfo.getServerInfos().size() == 0) {
@@ -217,6 +218,14 @@ public class MN2ServerController {
         logger.info("Starting Server Manager");
         ServerManager serverManager = new ServerManager(this);
         executorService.submit(serverManager);
+    }
+
+    public DatabaseServerInfo getDatabaseServerInfo() {
+        return databaseServerInfo;
+    }
+
+    public void setBungee(Bungee bungee) {
+        this.bungee = bungee;
     }
 
     public Bungee getBungee() {

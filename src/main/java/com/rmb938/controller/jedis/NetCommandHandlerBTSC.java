@@ -40,6 +40,10 @@ public class NetCommandHandlerBTSC extends NetCommandHandler {
                 case "stop":
                     serverController.stop();
                     break;
+                case "refreshServerTypes":
+                    serverController.getDatabaseServerInfo().loadServerInfo();
+                    serverController.setBungee(serverController.getDatabaseServerInfo().loadBungeeInfo());
+                    break;
                 default:
                     break;
             }

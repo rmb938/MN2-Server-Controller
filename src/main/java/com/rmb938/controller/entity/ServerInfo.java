@@ -1,14 +1,16 @@
 package com.rmb938.controller.entity;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ServerInfo {
 
-    private static HashMap<String, ServerInfo> serverInfos = new HashMap<>();
+    private final static ConcurrentHashMap<String, ServerInfo> serverInfos = new ConcurrentHashMap<>();
 
-    public static HashMap<String, ServerInfo> getServerInfos() {
-        return serverInfos;
+    public static ConcurrentHashMap<String, ServerInfo> getServerInfos() {
+        synchronized (serverInfos) {
+            return serverInfos;
+        }
     }
 
     private ArrayList<World> worlds = new ArrayList<>();

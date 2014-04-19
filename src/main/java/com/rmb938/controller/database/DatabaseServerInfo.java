@@ -63,6 +63,7 @@ public class DatabaseServerInfo {
     }
 
     public void loadServerInfo() {
+        ServerInfo.getServerInfos().clear();
         ArrayList<Object> beans = DatabaseAPI.getMySQLDatabase().getBeansInfo("select serverName, maxPlayers, minServers, memory from `mn2_server_info`", new MapListHandler());
         for (Object obj : beans) {
             Map map = (Map) obj;
