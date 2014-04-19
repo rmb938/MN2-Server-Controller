@@ -8,10 +8,13 @@ import com.rmb938.jedis.JedisManager;
 import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 public class ServerManager implements Runnable {
 
@@ -21,6 +24,35 @@ public class ServerManager implements Runnable {
 
     public ServerManager(MN2ServerController serverController) {
         this.serverController = serverController;
+    }
+
+    private RemoteController findLowestRemote(ServerInfo serverInfo) {
+        ArrayList<RemoteController> controllers = new ArrayList<>();
+        for (RemoteController remoteController : RemoteController.getRemoteControllers().values()) {
+            if (remoteController.getLastHeartbeat() + 60000 < System.currentTimeMillis()) {
+                continue;
+            }
+            int freeRam = remoteController.getRam() - remoteController.getUsedRam();
+            if (freeRam >= serverInfo.getMemory()) {
+                controllers.add(remoteController);
+            }
+        }
+        if (controllers.isEmpty()) {
+            return null;
+        }
+        Collections.sort(controllers, new Comparator<RemoteController>() {
+            @Override
+            public int compare(RemoteController o1, RemoteController o2) {
+                if (o1.getUsedRam() < o2.getUsedRam()) {
+                    return -1;
+                }
+                if (o1.getUsedRam() > o2.getUsedRam()) {
+                    return 1;
+                }
+                return 0;
+            }
+        });
+        return controllers.get(0);
     }
 
     public void run() {
@@ -48,6 +80,11 @@ public class ServerManager implements Runnable {
                     if (jedis.exists(serverInfo.getServerName()) == false) {
                         continue;
                     }
+                    JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
+                    String toIP = jsonObject.getString("to");
+                    if (toIP.equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
+                        continue;
+                    }
                     if (jedis.setnx("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + "") == 0) {
                         String lock = jedis.get("lock." + serverInfo.getServerName());
                         long time = Long.parseLong(lock != null ? lock : "0");
@@ -64,28 +101,51 @@ public class ServerManager implements Runnable {
                             continue;
                         }
                     }
-                    int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
-                    if (size > 0) {
-                        int needMake = canMake >= size ? size : size - canMake;
-                        logger.info("Making " + needMake + " " + serverInfo.getServerName());
-                        int failedMake = 0;
-                        for (int i = 0; i < needMake; i++) {
-                            int port = 25566;
-                            while (Server.getLocalServer(port, serverController) == true) {
-                                port += 1;
+                    String data = jedis.get(serverInfo.getServerName());
+                    if (data != null) {
+                        jsonObject = new JSONObject(data);
+                        toIP = jsonObject.getString("to");
+                        if (toIP.equalsIgnoreCase(serverController.getMainConfig().privateIP) == true) {
+                            int size = jsonObject.getInt("need");
+                            if (size > 0) {
+                                int needMake = canMake >= size ? size : canMake;
+                                logger.info("Making " + needMake + " of " + size + " "  + serverInfo.getServerName());
+                                int made = 0;
+                                for (int i = 0; i < needMake; i++) {
+                                    int port = 25566;
+                                    while (Server.getLocalServer(port, serverController) == true) {
+                                        port += 1;
+                                    }
+                                    boolean success = Server.startServer(serverInfo, serverController, port);
+                                    if (success == false) {
+                                        logger.info("Failed to make " + serverInfo.getServerName());
+                                    } else {
+                                        made += 1;
+                                    }
+                                    RemoteController remoteController = findLowestRemote(serverInfo);
+                                    if (size - made != 0) {
+                                        if (remoteController.getIP().equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
+                                            logger.info("Controller " + remoteController.getIP() + " has less load.");
+                                            break;
+                                        }
+                                    }
+                                }
+                                size -= made;
+                                jsonObject.put("need", size);
+                                if (size == 0) {
+                                    jedis.setex(serverInfo.getServerName(), 30, jsonObject.toString());
+                                } else {
+                                    RemoteController remoteController = findLowestRemote(serverInfo);
+                                    if (remoteController == null) {
+                                        logger.error("Unable to make more " + serverInfo.getServerName() + " network capacity reached!");
+                                        jedis.setex(serverInfo.getServerName(), 30, jsonObject.toString());
+                                    } else {
+                                        logger.info("Sending Extra to "+remoteController.getIP());
+                                        jsonObject.put("to", remoteController.getIP());
+                                        jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                    }
+                                }
                             }
-                            boolean success = Server.startServer(serverInfo, serverController, port);
-                            if (success == false) {
-                                logger.info("Failed to make " + serverInfo.getServerName());
-                                failedMake += 1;
-                            }
-                        }
-                        size -= needMake;
-                        size += failedMake;
-                        if (size == 0) {
-                            jedis.setex(serverInfo.getServerName(), 30, size + "");
-                        } else {
-                            jedis.set(serverInfo.getServerName(), size + "");
                         }
                     }
                     jedis.del("lock." + serverInfo.getServerName());
@@ -98,7 +158,8 @@ public class ServerManager implements Runnable {
                             int size = jedis.keys("server." + serverInfo.getServerName() + ".*").size();
                             logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (jedis.exists(serverInfo.getServerName())) {
-                                int jedisSize = Integer.parseInt(jedis.get(serverInfo.getServerName()));
+                                JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
+                                int jedisSize = jsonObject.getInt("need");
                                 if (jedisSize != 0) {
                                     logger.warn("Waiting to create " + jedisSize + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
                                 }
@@ -123,8 +184,15 @@ public class ServerManager implements Runnable {
                                         continue;
                                     }
                                 }
-
-                                jedis.set(serverInfo.getServerName(), need + "");
+                                RemoteController remoteController = findLowestRemote(serverInfo);
+                                if (remoteController == null) {
+                                    logger.error("Unable to make more "+serverInfo.getServerName()+" network capacity reached!");
+                                } else {
+                                    JSONObject jsonObject = new JSONObject();
+                                    jsonObject.put("need", need);
+                                    jsonObject.put("to", remoteController.getIP());
+                                    jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                }
                                 jedis.del("lock." + serverInfo.getServerName());
                             }
                         }
@@ -134,7 +202,8 @@ public class ServerManager implements Runnable {
                             for (ServerInfo serverInfo : Server.get75Full()) {
                                 logger.info("Checking Load Balance " + serverInfo.getServerName());
                                 if (jedis.exists(serverInfo.getServerName())) {
-                                    int size = Integer.parseInt(jedis.get(serverInfo.getServerName()));
+                                    JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
+                                    int size = jsonObject.getInt("need");
                                     if (size != 0) {
                                         logger.warn("Waiting to create " + size + " servers of " + serverInfo.getServerName() + " if this continues please check server status.");
                                     }
@@ -157,7 +226,15 @@ public class ServerManager implements Runnable {
                                         continue;
                                     }
                                 }
-                                jedis.set(serverInfo.getServerName(), "3");
+                                RemoteController remoteController = findLowestRemote(serverInfo);
+                                if (remoteController == null) {
+                                    logger.error("Unable to make more "+serverInfo.getServerName()+" network capacity reached!");
+                                } else {
+                                    JSONObject jsonObject = new JSONObject();
+                                    jsonObject.put("need", 3);
+                                    jsonObject.put("to", remoteController.getIP());
+                                    jedis.set(serverInfo.getServerName(), jsonObject.toString());
+                                }
                                 jedis.del("lock." + serverInfo.getServerName());
                             }
 

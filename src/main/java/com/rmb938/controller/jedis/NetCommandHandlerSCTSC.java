@@ -39,9 +39,10 @@ public class NetCommandHandlerSCTSC extends NetCommandHandler {
             switch (command) {
                 case "heartbeat":
                     UUID id = UUID.fromString((String) objectHashMap.get("id"));
+                    int ram = (Integer) objectHashMap.get("ram");
                     RemoteController remoteController = RemoteController.getRemoteControllers().get(fromServerController);
                     if (remoteController == null) {
-                        remoteController = new RemoteController(fromServerController, id);
+                        remoteController = new RemoteController(fromServerController, id, ram);
                         remoteController.setLastHeartbeat(System.currentTimeMillis());
                         RemoteController.getRemoteControllers().put(fromServerController,remoteController);
                         logger.info("Adding "+remoteController.getIP()+" to the cloud.");

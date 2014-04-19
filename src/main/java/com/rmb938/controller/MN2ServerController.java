@@ -4,10 +4,7 @@ package com.rmb938.controller;
 import com.rmb938.controller.config.MainConfig;
 import com.rmb938.controller.config.WorldConfig;
 import com.rmb938.controller.database.DatabaseServerInfo;
-import com.rmb938.controller.entity.Bungee;
-import com.rmb938.controller.entity.Plugin;
-import com.rmb938.controller.entity.ServerInfo;
-import com.rmb938.controller.entity.World;
+import com.rmb938.controller.entity.*;
 import com.rmb938.controller.jedis.NetCommandHandlerBTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSCTSC;
 import com.rmb938.controller.jedis.NetCommandHandlerSTSC;
@@ -242,6 +239,12 @@ public class MN2ServerController {
                     logger.info("Sending beat");
                     NetCommandSCTSC netCommandSCTSC = new NetCommandSCTSC("heartbeat", mainConfig.privateIP, "*");
                     netCommandSCTSC.addArg("id", controllerId.toString());
+                    netCommandSCTSC.addArg("ram", mainConfig.controller_serverRam);
+                    int usedRam = 0;
+                    if (RemoteController.getRemoteControllers().contains(mainConfig.privateIP)) {
+                        usedRam = RemoteController.getRemoteControllers().get(mainConfig.privateIP).getUsedRam();
+                    }
+                    netCommandSCTSC.addArg("usedRam", usedRam);
                     netCommandSCTSC.flush();
                     try {
                         Thread.sleep(5000);
