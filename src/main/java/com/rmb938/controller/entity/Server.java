@@ -260,6 +260,7 @@ public class Server {
             jsonObject.put("serverPort", port);
             jsonObject.put("serverName", serverInfo.getServerName());
             jsonObject.put("serverId", serverNumber);
+            jsonObject.put("maxPlayers", serverInfo.getMaxPlayers());
             jsonObject.put("currentPlayers", 0);
             jsonObject.put("timeEmpty", 0);
         } catch (JSONException e) {

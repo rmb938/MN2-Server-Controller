@@ -34,9 +34,6 @@ public class NetCommandHandlerBTSC extends NetCommandHandler {
             String command = jsonObject.getString("command");
             HashMap<String, Object> objectHashMap = objectToHashMap(jsonObject.getJSONObject("data"));
             switch (command) {
-                case "heartbeat":
-                    serverController.getBungee().setLastHeartBeat(System.currentTimeMillis());
-                    break;
                 case "stop":
                     serverController.stop();
                     break;

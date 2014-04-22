@@ -4,6 +4,8 @@ import com.rmb938.controller.MN2ServerController;
 import com.rmb938.jedis.JedisManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.json.JSONException;
+import org.json.JSONObject;
 import redis.clients.jedis.Jedis;
 
 import java.io.File;
@@ -14,20 +16,10 @@ public class Bungee implements Runnable {
 
     private static final Logger logger = LogManager.getLogger(Bungee.class.getName());
     private MN2ServerController serverController;
-    private long lastHeartBeat;
     private ArrayList<Plugin> plugins = new ArrayList<>();
 
     public Bungee(MN2ServerController serverController) {
         this.serverController = serverController;
-        this.lastHeartBeat = -1;
-    }
-
-    public long getLastHeartBeat() {
-        return lastHeartBeat;
-    }
-
-    public void setLastHeartBeat(long lastHeartBeat) {
-        this.lastHeartBeat = lastHeartBeat;
     }
 
     public ArrayList<Plugin> getPlugins() {
@@ -67,7 +59,15 @@ public class Bungee implements Runnable {
         builder.directory(new File("./runningServers/bungee"));//sets working directory
 
         Jedis jedis = JedisManager.getJedis();
-        jedis.set(serverController.getMainConfig().publicIP+":bungee", serverController.getMainConfig().privateIP);
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("privateIP", serverController.getMainConfig().privateIP);
+            jsonObject.put("currentPlayers", 0);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        jedis.set(serverController.getMainConfig().publicIP+":bungee", jsonObject.toString());
+        jedis.expire(serverController.getMainConfig().publicIP+":bungee", 120);
         JedisManager.returnJedis(jedis);
 
         logger.info("Running Bungee Process");

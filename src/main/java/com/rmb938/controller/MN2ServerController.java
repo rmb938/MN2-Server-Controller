@@ -210,11 +210,6 @@ public class MN2ServerController {
             logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
         }
 
-        if (bungee.getLastHeartBeat() == -1) {
-            logger.info("Starting Bungee Instance");
-            bungee.startBungee();
-        }
-
         logger.info("Starting Server Manager");
         ServerManager serverManager = new ServerManager(this);
         executorService.submit(serverManager);

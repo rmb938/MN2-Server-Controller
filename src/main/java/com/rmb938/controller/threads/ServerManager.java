@@ -60,10 +60,9 @@ public class ServerManager implements Runnable {
             Jedis jedis = null;
             try {
                 jedis = JedisManager.getJedis();
-                if (serverController.getBungee().getLastHeartBeat() + 60000 < System.currentTimeMillis() && serverController.getBungee().getLastHeartBeat() > 0) {
+                if (jedis.exists(serverController.getMainConfig().publicIP+":bungee") == false) {
                     logger.info("Restarting Bungee Instance. Must of crashed.");
                     serverController.getBungee().startBungee();
-                    serverController.getBungee().setLastHeartBeat(-1);
                 }
                 logger.info("Checking Make");
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
