@@ -75,7 +75,7 @@ public class DatabaseServerInfo {
             ArrayList<Object> beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select pluginName from `mn2_server_info_plugins` where serverName='"+serverName+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
-                String pluginName = (String) map1.get("pluginName");
+                String pluginName = ((String) map1.get("pluginName")).trim();
                 Plugin plugin = Plugin.getPlugins().get(pluginName);
                 if (plugin == null) {
                     logger.warn("Could not load plugin "+pluginName+" into server plugin is null.");
@@ -86,7 +86,7 @@ public class DatabaseServerInfo {
             beans1 = DatabaseAPI.getMySQLDatabase().getBeansInfo("select worldName from `mn2_server_info_worlds` where serverName='"+serverName+"'", new MapListHandler());
             for (Object obj1 : beans1) {
                 Map map1 = (Map) obj1;
-                String worldName = (String) map1.get("worldName");
+                String worldName = ((String) map1.get("worldName")).trim();
                 World world = World.getWorlds().get(worldName);
                 if (world == null) {
                     logger.warn("Could not load world "+worldName+" into server "+serverInfo.getServerName()+" world is null.");

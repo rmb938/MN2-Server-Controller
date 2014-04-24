@@ -71,21 +71,6 @@ public class MN2ServerController {
             return;
         }
 
-        logger.info("Checking Plugins");
-        File pluginsFolder = new File("./plugins");
-        if (pluginsFolder.exists() == false) {
-            logger.error("There is no plugins directory! FIX THIS");
-            return;
-        }
-        if (pluginsFolder.isDirectory() == false) {
-            logger.error("There is no plugins directory! FIX THIS");
-            return;
-        }
-        if (pluginsFolder.listFiles().length == 0) {
-            logger.error("There are no plugins to load. FIX THIS!");
-            return;
-        }
-
         logger.info("Checking Spigot");
         File spigotFolder = new File("./server/spigot");
         if (spigotFolder.exists() == false) {
@@ -116,56 +101,8 @@ public class MN2ServerController {
             return;
         }
 
-        logger.info("Checking Worlds");
-        File worldsFolder = new File("./worlds");
-        if (worldsFolder.exists() == false) {
-            logger.error("There is no worlds directory! FIX THIS");
-            return;
-        }
-        if (worldsFolder.isDirectory() == false) {
-            logger.error("There is no worldsFolder directory! FIX THIS");
-            return;
-        }
-        if (worldsFolder.listFiles().length == 0) {
-            logger.error("There are no worlds to load. FIX THIS!");
-            return;
-        }
-
-        logger.info("Loading Worlds");
-        for (File worldFolder : worldsFolder.listFiles()) {
-            if (worldFolder.isDirectory() == false) {
-                continue;
-            }
-            File worldConfigFile = new File(worldFolder, "config.yml");
-            WorldConfig worldConfig = new WorldConfig(worldConfigFile, worldFolder.getName());
-            try {
-                worldConfig.init();
-            } catch (InvalidConfigurationException e) {
-                logger.error("Error loading world config for " + worldConfigFile.getName());
-                logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
-                continue;
-            }
-            World world = new World(worldFolder.getName(), worldConfig);
-            logger.info("Loaded World "+world.getWorldName());
-            World.getWorlds().put(world.getWorldName(), world);
-        }
-        if (World.getWorlds().size() == 0) {
-            logger.error("No worlds were loaded. FIX THIS!");
-            return;
-        }
-
-        logger.info("Loading Plugins");
-        for (File pluginFolder : pluginsFolder.listFiles()) {
-            if (pluginFolder.isDirectory() == false) {
-                continue;
-            }
-            if (pluginFolder.listFiles().length == 0) {
-                logger.warn("Cannot load plugin "+pluginFolder.getName()+" no plugin files.");
-                continue;
-            }
-            Plugin plugin = new Plugin(pluginFolder.getName());
-            Plugin.getPlugins().put(plugin.getPluginName(), plugin);
-        }
+        loadWorlds();
+        loadPlugins();
 
         logger.info("Connecting to MySQL");
         DatabaseAPI.initializeMySQL(mainConfig.mySQL_userName, mainConfig.mySQL_password, mainConfig.mySQL_database, mainConfig.mySQL_address, mainConfig.mySQL_port);
@@ -213,6 +150,78 @@ public class MN2ServerController {
         logger.info("Starting Server Manager");
         ServerManager serverManager = new ServerManager(this);
         executorService.submit(serverManager);
+    }
+
+    public void loadPlugins() {
+        logger.info("Checking Plugins");
+        Plugin.getPlugins().clear();
+        File pluginsFolder = new File("./plugins");
+        if (pluginsFolder.exists() == false) {
+            logger.error("There is no plugins directory! FIX THIS");
+            return;
+        }
+        if (pluginsFolder.isDirectory() == false) {
+            logger.error("There is no plugins directory! FIX THIS");
+            return;
+        }
+        if (pluginsFolder.listFiles().length == 0) {
+            logger.error("There are no plugins to load. FIX THIS!");
+            return;
+        }
+        logger.info("Loading Plugins");
+        for (File pluginFolder : pluginsFolder.listFiles()) {
+            if (pluginFolder.isDirectory() == false) {
+                continue;
+            }
+            if (pluginFolder.listFiles().length == 0) {
+                logger.warn("Cannot load plugin "+pluginFolder.getName()+" no plugin files.");
+                continue;
+            }
+            Plugin plugin = new Plugin(pluginFolder.getName());
+            logger.info("Loading Plugin: "+plugin.getPluginName());
+            Plugin.getPlugins().put(plugin.getPluginName(), plugin);
+            logger.info("Plugin: "+Plugin.getPlugins().get(plugin.getPluginName()).getPluginName());
+        }
+    }
+
+    public void loadWorlds() {
+        logger.info("Checking Worlds");
+        File worldsFolder = new File("./worlds");
+        if (worldsFolder.exists() == false) {
+            logger.error("There is no worlds directory! FIX THIS");
+            return;
+        }
+        if (worldsFolder.isDirectory() == false) {
+            logger.error("There is no worldsFolder directory! FIX THIS");
+            return;
+        }
+        if (worldsFolder.listFiles().length == 0) {
+            logger.error("There are no worlds to load. FIX THIS!");
+            return;
+        }
+        World.getWorlds().clear();
+        logger.info("Loading Worlds");
+        for (File worldFolder : worldsFolder.listFiles()) {
+            if (worldFolder.isDirectory() == false) {
+                continue;
+            }
+            File worldConfigFile = new File(worldFolder, "config.yml");
+            WorldConfig worldConfig = new WorldConfig(worldConfigFile, worldFolder.getName());
+            try {
+                worldConfig.init();
+            } catch (InvalidConfigurationException e) {
+                logger.error("Error loading world config for " + worldConfigFile.getName());
+                logger.error(logger.getMessageFactory().newMessage(e.getMessage()), e.fillInStackTrace());
+                continue;
+            }
+            World world = new World(worldFolder.getName(), worldConfig);
+            logger.info("Loaded World "+world.getWorldName());
+            World.getWorlds().put(world.getWorldName(), world);
+        }
+        if (World.getWorlds().size() == 0) {
+            logger.error("No worlds were loaded. FIX THIS!");
+            return;
+        }
     }
 
     public DatabaseServerInfo getDatabaseServerInfo() {

@@ -230,7 +230,7 @@ public class ServerManager implements Runnable {
                                     logger.error("Unable to make more "+serverInfo.getServerName()+" network capacity reached!");
                                 } else {
                                     JSONObject jsonObject = new JSONObject();
-                                    jsonObject.put("need", 3);
+                                    jsonObject.put("need", 1);
                                     jsonObject.put("to", remoteController.getIP());
                                     jedis.setex(serverInfo.getServerName(), 60, jsonObject.toString());
                                 }
@@ -239,24 +239,26 @@ public class ServerManager implements Runnable {
 
                             //Remove Empty Servers
                             for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                                ArrayList<String> servers = Server.getServers(serverInfo);
+                                ArrayList<String> servers = Server.getServerKeys(serverInfo);
                                 int size = servers.size();
                                 if (size <= serverInfo.getMinServers()) {
                                     continue;
                                 }
-                                ArrayList<String> localEmpty = Server.getLocalEmpty(serverController, 120);
-
-                                int maxRemove = size - serverInfo.getMinServers();
-                                int toRemove;
-                                if (localEmpty.size() > maxRemove) {
-                                    toRemove = localEmpty.size() - maxRemove;
-                                } else {
-                                    toRemove = maxRemove - localEmpty.size();
-                                }
-                                for (int i = 0; i < toRemove; i++) {
-                                    logger.info("Load Balance remove " + serverInfo.getServerName());
-                                    NetCommandSCTS netCommandSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, localEmpty.get(i));
-                                    netCommandSCTS.flush();
+                                int percent = (Server.getOnlinePlayers(serverInfo)/Server.getMaxPlayers(serverInfo)) * 100;
+                                if (percent < 70) {
+                                    String uuid = null;
+                                    while (uuid == null) {
+                                        String server = servers.get(servers.size()-1);
+                                        String data = jedis.get(server);
+                                        if (data == null) {
+                                            servers.remove(server);
+                                            continue;
+                                        }
+                                        JSONObject jsonObject = new JSONObject();
+                                        uuid = jsonObject.getString("uuid");
+                                    }
+                                    NetCommandSCTS netCommandHandlerSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, uuid);
+                                    netCommandHandlerSCTS.flush();
                                 }
                             }
                         }
