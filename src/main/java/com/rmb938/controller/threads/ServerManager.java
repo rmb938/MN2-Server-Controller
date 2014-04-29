@@ -5,7 +5,6 @@ import com.rmb938.controller.entity.RemoteController;
 import com.rmb938.controller.entity.Server;
 import com.rmb938.controller.entity.ServerInfo;
 import com.rmb938.jedis.JedisManager;
-import com.rmb938.jedis.net.command.servercontroller.NetCommandSCTS;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
@@ -15,6 +14,7 @@ import redis.clients.jedis.exceptions.JedisConnectionException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Set;
 
 public class ServerManager implements Runnable {
 
@@ -112,8 +112,12 @@ public class ServerManager implements Runnable {
                                 int made = 0;
                                 for (int i = 0; i < needMake; i++) {
                                     int port = 25566;
-                                    while (Server.getLocalServer(port, serverController) == true) {
-                                        port += 1;
+                                    while (true) {
+                                        if (Server.getLocalServer(port, serverController) == true) {
+                                            port += 1;
+                                            continue;
+                                        }
+                                        break;
                                     }
                                     boolean success = Server.startServer(serverInfo, serverController, port);
                                     if (success == false) {
@@ -154,7 +158,9 @@ public class ServerManager implements Runnable {
                     if (RemoteController.getMainController().getControllerID().compareTo(serverController.getControllerId()) == 0) {
                         //Start up more servers if less then min needed
                         for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                            int size = jedis.keys("server." + serverInfo.getServerName() + ".*").size();
+                            int max = serverInfo.getMinServers();
+                            Set<String> keys = jedis.keys("server." + serverInfo.getServerName() + ".*");
+                            int size = keys.size();
                             logger.info("Currently " + size + " of " + serverInfo.getServerName());
                             if (jedis.exists(serverInfo.getServerName())) {
                                 JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
@@ -164,9 +170,15 @@ public class ServerManager implements Runnable {
                                 }
                                 continue;
                             }
-                            if (serverInfo.getMinServers() > size) {
-                                int need = serverInfo.getMinServers() - size;
-
+                            int foundLower = 0;
+                            for (String key : keys) {
+                                int id = Integer.parseInt(key.split("\\.")[2]);
+                                if (id <= max) {
+                                    foundLower += 1;
+                                }
+                            }
+                            if (serverInfo.getMinServers() > foundLower) {
+                                int need = serverInfo.getMinServers() - foundLower;
                                 if (jedis.setnx("lock." + serverInfo.getServerName(), System.currentTimeMillis() + 30000 + "") == 0) {
                                     String lock = jedis.get("lock." + serverInfo.getServerName());
                                     long time = Long.parseLong(lock != null ? lock : "0");
@@ -198,7 +210,7 @@ public class ServerManager implements Runnable {
 
                         //Add more servers if needed
                         if (serverController.getMainConfig().controller_loadBalance) {
-                            for (ServerInfo serverInfo : Server.get75Full()) {
+                            for (ServerInfo serverInfo : Server.get50Full()) {
                                 logger.info("Checking Load Balance " + serverInfo.getServerName());
                                 if (jedis.exists(serverInfo.getServerName())) {
                                     JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
@@ -238,7 +250,7 @@ public class ServerManager implements Runnable {
                             }
 
                             //Remove Empty Servers
-                            for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
+                            /*for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
                                 ArrayList<String> servers = Server.getServerKeys(serverInfo);
                                 int size = servers.size();
                                 if (size <= serverInfo.getMinServers()) {
@@ -254,13 +266,13 @@ public class ServerManager implements Runnable {
                                             servers.remove(server);
                                             continue;
                                         }
-                                        JSONObject jsonObject = new JSONObject();
+                                        JSONObject jsonObject = new JSONObject(data);
                                         uuid = jsonObject.getString("uuid");
                                     }
                                     NetCommandSCTS netCommandHandlerSCTS = new NetCommandSCTS("shutdown", serverController.getMainConfig().privateIP, uuid);
                                     netCommandHandlerSCTS.flush();
                                 }
-                            }
+                            }*/
                         }
                     }
                 }

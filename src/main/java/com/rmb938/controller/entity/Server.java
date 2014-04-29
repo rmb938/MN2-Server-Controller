@@ -92,7 +92,7 @@ public class Server {
         return servers;
     }
 
-    public static ArrayList<ServerInfo> get75Full() {
+    public static ArrayList<ServerInfo> get50Full() {
         ArrayList<ServerInfo> infos = new ArrayList<>();
         for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
             int max = Server.getMaxPlayers(serverInfo);
@@ -100,8 +100,9 @@ public class Server {
             if (max <= 0) {
                 continue;
             }
-            int percent = (online/max) * 100;
-            if (percent >= 75) {
+            double percent = (online / (max * 1.0)) * 100;
+            logger.info(serverInfo.getServerName() + " Online: " + online + " Max: " + max + " Percent: " + percent);
+            if (percent >= 50) {
                 infos.add(serverInfo);
             }
         }
@@ -154,7 +155,7 @@ public class Server {
     public static int getOnlinePlayers(ServerInfo serverInfo) {
         int online = 0;
         Jedis jedis = JedisManager.getJedis();
-        Set<String> keys = jedis.keys("server."+serverInfo.getServerName()+".*");
+        Set<String> keys = jedis.keys("server." + serverInfo.getServerName() + ".*");
         for (String key : keys) {
             String data = jedis.get(key);
             if (data != null) {
@@ -173,7 +174,7 @@ public class Server {
     public static int getMaxPlayers(ServerInfo serverInfo) {
         int max = 0;
         Jedis jedis = JedisManager.getJedis();
-        Set<String> keys = jedis.keys("server."+serverInfo.getServerName()+".*");
+        Set<String> keys = jedis.keys("server." + serverInfo.getServerName() + ".*");
         for (String key : keys) {
             String data = jedis.get(key);
             if (data != null) {
@@ -202,7 +203,28 @@ public class Server {
             try {
                 Runtime runtime = Runtime.getRuntime();
 
-                Process process = runtime.exec(new String[]{"rm", "-rf", "./runningServers/" + port});
+                String oldName = null;
+
+                if ((new File("./runningServers/" + port + "/server.properties").exists() == true)) {
+                    Scanner scanner = new Scanner(new FileInputStream(new File("./runningServers/" + port + "/server.properties")));
+                    while (scanner.hasNext()) {
+                        String line = scanner.nextLine();
+                        if (line.contains("server-name=")) {
+                            oldName = line.replace("server-name=", "");
+                            break;
+                        }
+                    }
+                }
+
+                if (oldName != null) {
+                    Process process = runtime.exec(new String[]{"mv", "./runningServers/" + port + "/logs/latest.log", serverController.getLogsFolder().getAbsolutePath() + "/" + oldName + ".log"});
+                    process.waitFor();
+                }
+
+                Process process = runtime.exec(new String[]{"fuser", "-k", port+"/tcp"});
+                process.waitFor();
+
+                process = runtime.exec(new String[]{"rm", "-rf", "./runningServers/" + port});
                 process.waitFor();
 
                 process = runtime.exec(new String[]{"mkdir", "./runningServers/" + port});
@@ -330,7 +352,6 @@ public class Server {
             ex.printStackTrace();
             return false;
         }
-        Thread.yield();
         return true;
     }
 

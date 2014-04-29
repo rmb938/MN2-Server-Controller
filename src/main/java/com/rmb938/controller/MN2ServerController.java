@@ -40,6 +40,7 @@ public class MN2ServerController {
     private Bungee bungee;
     private Metrics metrics;
     private DatabaseServerInfo databaseServerInfo;
+    private File logsFolder;
 
     public MN2ServerController(String[] args) {
         this.controllerId = UUID.randomUUID();
@@ -68,6 +69,13 @@ public class MN2ServerController {
 
         if (mainConfig.controller_serverRam == 0) {
             logger.error("Please set the amount of memory before running the controller.");
+            return;
+        }
+
+        logger.info("Checking Logs");
+        logsFolder = new File("./logs");
+        if (logsFolder.exists() == false) {
+            logger.error("There is no logs directory!");
             return;
         }
 
@@ -182,6 +190,10 @@ public class MN2ServerController {
             Plugin.getPlugins().put(plugin.getPluginName(), plugin);
             logger.info("Plugin: "+Plugin.getPlugins().get(plugin.getPluginName()).getPluginName());
         }
+    }
+
+    public File getLogsFolder() {
+        return logsFolder;
     }
 
     public void loadWorlds() {
