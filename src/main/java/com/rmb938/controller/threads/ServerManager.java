@@ -66,17 +66,17 @@ public class ServerManager implements Runnable {
                 }
                 logger.info("Checking Make");
                 for (ServerInfo serverInfo : ServerInfo.getServerInfos().values()) {
-                    int usedRam = 0;
-                    usedRam += serverInfo.getMemory() * Server.getLocalServers(serverController).size();
+                    if (jedis.exists(serverInfo.getServerName()) == false) {
+                        continue;
+                    }
+                    int usedRam = RemoteController.getRemoteControllers().get(serverController.getMainConfig().privateIP).getUsedRam();
                     int freeRam = serverController.getMainConfig().controller_serverRam - usedRam;
                     int canMake = 0;
                     if (freeRam != 0) {
                         canMake = freeRam / serverInfo.getMemory();
                     }
                     if (canMake == 0) {
-                        continue;
-                    }
-                    if (jedis.exists(serverInfo.getServerName()) == false) {
+                        System.out.println("Can't make " + serverInfo.getServerName() + " " + serverInfo.getMemory() + " Free: " + freeRam);
                         continue;
                     }
                     JSONObject jsonObject = new JSONObject(jedis.get(serverInfo.getServerName()));
@@ -125,9 +125,9 @@ public class ServerManager implements Runnable {
                                     } else {
                                         made += 1;
                                     }
-                                    RemoteController remoteController = findLowestRemote(serverInfo);
                                     if (size - made != 0) {
-                                        if (remoteController != null && remoteController.getIP().equalsIgnoreCase(serverController.getMainConfig().privateIP) == false) {
+                                        RemoteController remoteController = findLowestRemote(serverInfo);
+                                        if (remoteController != null && RemoteController.getRemoteControllers().get(serverController.getMainConfig().privateIP) != remoteController) {
                                             logger.info("Controller " + remoteController.getIP() + " has less load.");
                                             break;
                                         }

@@ -35,7 +35,10 @@ public class Bungee implements Runnable {
             try {
                 Runtime runtime = Runtime.getRuntime();
 
-                Process process = runtime.exec(new String[]{"rm", "-rf", "./runningServers/bungee"});
+                Process process = runtime.exec(new String[] {"./killOnPort.sh", "25565"});
+                process.waitFor();
+
+                process = runtime.exec(new String[]{"rm", "-rf", "./runningServers/bungee"});
                 process.waitFor();
 
                 process = runtime.exec(new String[]{"mkdir", "./runningServers/bungee"});

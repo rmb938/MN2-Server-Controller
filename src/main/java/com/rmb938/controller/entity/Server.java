@@ -205,6 +205,9 @@ public class Server {
 
                 String oldName = null;
 
+                Process process = runtime.exec(new String[] {"./killOnPort.sh", port+""});
+                process.waitFor();
+
                 if ((new File("./runningServers/" + port + "/server.properties").exists() == true)) {
                     Scanner scanner = new Scanner(new FileInputStream(new File("./runningServers/" + port + "/server.properties")));
                     while (scanner.hasNext()) {
@@ -217,12 +220,9 @@ public class Server {
                 }
 
                 if (oldName != null) {
-                    Process process = runtime.exec(new String[]{"mv", "./runningServers/" + port + "/logs/latest.log", serverController.getLogsFolder().getAbsolutePath() + "/" + oldName + ".log"});
+                    process = runtime.exec(new String[]{"mv", "./runningServers/" + port + "/logs/latest.log", serverController.getLogsFolder().getAbsolutePath() + "/" + oldName + ".log"});
                     process.waitFor();
                 }
-
-                Process process = runtime.exec(new String[]{"fuser", "-k", port+"/tcp"});
-                process.waitFor();
 
                 process = runtime.exec(new String[]{"rm", "-rf", "./runningServers/" + port});
                 process.waitFor();
